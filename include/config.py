@@ -32,6 +32,11 @@ SOCCER_DB_PATH = RAW_DIR / "soccer_db" / "database.sqlite"
 KAGGLE_DATASET_SLUG = "hugomathien/soccer"
 
 # bronze/: resultado crudo de cada consulta SQL a source-db, sin transformar.
+# bronze/<tabla>.parquet es la última corrida (lo que lee el resto del DAG);
+# bronze/<tabla>/<huella>/bronze.parquet (+ meta.json) es el histórico, una
+# carpeta por cada huella de fuente+código distinta (ver
+# include/src/change_detection.py y include/src/extract.py). Si la huella no
+# cambió, no se agrega nada nuevo.
 BRONZE_DIR = DATA_DIR / "bronze"
 # intermediate/: pasos entre Bronze y Silver (persisten para no pasar
 # DataFrames por XCom y para poder auditar cada etapa).

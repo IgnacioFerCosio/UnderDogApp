@@ -16,7 +16,10 @@ source-db (PostgreSQL) --Connection soccer_source_db--> consultas SQL (include/s
    código no cambiaron desde la última corrida exitosa, se saltea el resto
    (ShortCircuit). `force_rebuild=true` al disparar a mano fuerza la corrida.
 3. `extract_*_bronze`: una consulta SQL por tabla, vía PostgresHook, a
-   `include/data/bronze/*.parquet`.
+   `include/data/bronze/*.parquet` (última corrida) y a
+   `include/data/bronze/<tabla>/<huella>/bronze.parquet` (histórico: se
+   agrega un snapshot nuevo solo cuando cambió la fuente o el código; si no
+   cambió, se reusa el que ya existe).
 4. `prepare_matches` -> `define_underdog_and_target` -> `filter_valid_underdogs`
    y, en paralelo, `build_lineup_features`.
 5. `build_silver_dataset`: Silver sin columnas post-partido + auditoría aparte.
@@ -105,12 +108,14 @@ def underdog_pipeline():
         return rebuild
 
     @task
-    def extract_bronze(table_name: str) -> dict:
+    def extract_bronze(table_name: str, version: str) -> dict:
         """Corre la consulta de include/sql/ contra source-db y guarda el
-        resultado tal cual en include/data/bronze/<tabla>.parquet."""
+        resultado tal cual en include/data/bronze/<tabla>.parquet, más un
+        histórico versionado por la huella de fuente+código en
+        include/data/bronze/<tabla>/<version>.parquet."""
         from include.src.extract import extract_to_bronze
 
-        return extract_to_bronze(table_name)
+        return extract_to_bronze(table_name, version)
 
     @task
     def prepare_matches(matches: dict, teams: dict) -> dict:
@@ -221,7 +226,9 @@ def underdog_pipeline():
     changed = detect_source_changes(fingerprint)
     check_source_db >> fingerprint
 
-    bronze = {name: extract_bronze.override(task_id=f"extract_{name}_bronze")(name) for name in BRONZE_QUERIES}
+    bronze = {
+        name: extract_bronze.override(task_id=f"extract_{name}_bronze")(name, fingerprint["fingerprint"]) for name in BRONZE_QUERIES
+    }
     changed >> list(bronze.values())
 
     prepared = prepare_matches(bronze["matches"], bronze["teams"])

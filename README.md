@@ -190,8 +190,10 @@ Por qué diario y cómo funciona el ShortCircuit: [docs/architecture.md](docs/ar
 
 ## 16. Dónde están Bronze y Silver
 
-`include/data/bronze/` y `include/data/silver/`. Tabla completa en el punto 6. Los datos no se versionan: se regeneran con
-seed + DAG.
+`include/data/bronze/` y `include/data/silver/`. Tabla completa en el punto 6. Silver no se versiona: se regenera con
+seed + DAG. Bronze sí: además de `bronze/<tabla>.parquet` (última corrida), cada huella de fuente+código distinta
+(`include/src/change_detection.py`) deja una carpeta `bronze/<tabla>/<huella>/` con `bronze.parquet` y `meta.json`
+(filas, columnas, query, cuándo se extrajo). Si la huella no cambió, no se agrega nada nuevo.
 
 ## 17. Tests
 
