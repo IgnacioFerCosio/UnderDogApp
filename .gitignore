@@ -28,3 +28,6 @@ include/data/**
 !include/data/*/
 !include/data/*/.gitkeep
 *.zip
+
+# lock temporal de `astro config set`
+.astro/config.yaml.lock
