@@ -103,6 +103,32 @@ Regla: **si una columna solo existe después de jugarse el partido, no puede ser
 
 Requisitos: Docker Desktop corriendo y [Astro CLI](https://www.astronomer.io/docs/astro/cli/install-cli).
 
+> **Paso a paso desde cero (cada integrante, una vez)**
+>
+> 1. Clonar el repo y poner `database.sqlite` (Kaggle `hugomathien/soccer`) en `include/data/raw/soccer_db/`.
+> 2. Crear los dos archivos de credenciales (no se versionan; cada uno tiene los suyos). En PowerShell:
+>    `Copy-Item .env.example .env` y `Copy-Item source_db.env.example source_db.env`.
+> 3. Elegir **una** contraseña, solo letras y números (ej. `underdog2026`), y ponerla **en los dos archivos**, cada uno en su formato:
+>
+>    | Archivo | Qué cambiar |
+>    |---|---|
+>    | `source_db.env` | `POSTGRES_PASSWORD=underdog2026` |
+>    | `.env` | dentro de la URL: `AIRFLOW_CONN_SOCCER_SOURCE_DB=postgres://soccer:underdog2026@source-db:5432/soccer` |
+>
+>    En `.env` va `source-db:5432` (el puerto **adentro** de Docker), no el puerto publicado en la PC. Los `.example` no se tocan.
+>    `KAGGLE_API_TOKEN` queda vacío si ya tenés el `database.sqlite`.
+> 4. `astro dev start`. Si un puerto está ocupado, ver «Puertos» en la sección de la Entrega 3.
+> 5. Cargar PostgreSQL una sola vez (≈5 minutos; ver §13): `astro dev bash` y adentro `python -m include.src.source_loader`.
+> 6. Correr el DAG `underdog_pipeline` con `force_rebuild = true` (UI en <http://localhost:8080> o §14). Tiene que terminar con
+>    las 15 tareas en verde.
+> 7. Entorno local para el notebook (§17): `python -m venv .venv` y `.venv/Scripts/pip install -r requirements-dev.txt`.
+>
+> **Error típico**: `password authentication failed for user "soccer"` = las contraseñas de `.env` y `source_db.env` no coinciden
+> (o quedó `CAMBIAR_PASSWORD` en alguno). Corregir y hacer `astro dev restart`: las variables se leen al arrancar.
+>
+> Si `source_db.env` se cambia **después** de la primera vez, PostgreSQL ya creó el usuario con la contraseña vieja (vive en el
+> volumen). Hay que volver a la contraseña original o borrar el volumen (`astro dev kill`) y repetir desde el paso 4.
+
 ```bash
 cp .env.example .env
 ```
@@ -249,6 +275,33 @@ de cada ficha recoge lo que el grupo esperaba antes de ver los resultados. Check
 - No hay estado de forma reciente, lesiones ni suspensiones como columnas. Un titular ausente se refleja solo porque no está en la alineación.
 - Errores puntuales de la fuente, medidos: en 4 partidos de Silver las coordenadas Y vienen vacías o en 0 (nulos documentados),
   y 835 snapshots duplicados vacíos (descartados).
+
+## Entrega 3 — Modelado
+
+`notebooks/entrega_3_modelado.ipynb` (ejecutado, con salidas guardadas, `SEMILLA = 42`). Lee el Silver que produce el DAG.
+
+- **Métrica**: ROC-AUC (ordenar partidos por chance de sorpresa), log-loss de secundaria (calibración).
+- **Validación**: temporal. `TimeSeriesSplit(5)` sobre 2008/09–2014/15; test = temporada 2015/16, mirado una vez.
+- **Comparación**: piso (`DummyClassifier`), cuota cruda del mercado, logística, árbol, random forest y gradient boosting,
+  cada familia con su grilla y media ± desvío. Ningún modelo complejo le gana a la logística por más que el desvío.
+- **Modelo final**: regresión logística sobre `logit(prob_no_favorito)`. Aprende `logit(p) = −0,04 + 1,00 · logit(mercado)`:
+  la probabilidad del mercado ya está calibrada y los 10 gaps de jugadores no le agregan nada (Δ AUC −0,0002 ± 0,003).
+  Validación AUC 0,637 ± 0,010; test AUC 0,656, log-loss 0,499 (piso 0,529).
+- **Artefacto para la Entrega 4**: `include/data/models/underdog_modelo.joblib` (pipeline completo) + `underdog_modelo.json`
+  (columnas, umbral 0,172, métricas). Para cargarlo hace falta poder importar `include.src.features` (el `logit` del pipeline).
+
+Re-ejecutarlo de arriba a abajo (con el DAG ya corrido):
+
+```bash
+.venv/Scripts/jupyter nbconvert --to notebook --execute --inplace notebooks/entrega_3_modelado.ipynb
+```
+
+`scripts/build_silver_local.py` **no es parte del pipeline**: reconstruye Silver corriendo las mismas consultas de
+`include/sql/` y las mismas funciones de `transform.py` contra el SQLite original, y sirve solo para **verificar** que el
+Silver del DAG (PostgreSQL) es idéntico.
+
+**Puertos en esta copia**: la metadata de Airflow usa el 5435 (`.astro/config.yaml`) y `source-db` se publica en
+`localhost:5434`, porque 5432 y 5433 los usa otro proyecto en la misma PC.
 
 ## Estructura
 
