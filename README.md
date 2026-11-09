@@ -1,4 +1,18 @@
-# ¿Gana el underdog? — pipeline de datos (Entrega 2)
+# ¿Gana el underdog?
+
+Proyecto integrador de Ciencia de Datos (UTN FRM, 5K10): ¿ganará el equipo no favorito el próximo partido, según las cuotas
+pre-partido y los ratings de sus titulares?
+
+**🔗 Aplicación: <https://matiroiz1.github.io/UnderDog/>**
+
+| Entrega | Qué es | Dónde |
+|---|---|---|
+| 1 y 2 · Pipeline y análisis | DAG de Airflow que consulta PostgreSQL y produce Bronze → Silver; EDA con cuatro hipótesis | `dags/`, `include/`, `notebooks/entrega_2_eda.ipynb` (secciones 1 a 19 de este README) |
+| 3 · Modelado | Comparación de modelos con validación temporal, medidos en AUC y en plata; modelo final | `notebooks/entrega_3_modelado.ipynb` ([sección Entrega 3](#entrega-3--modelado)) |
+| 4 · Aplicación | Página con la historia del proyecto, exploración de los datos y prueba del modelo | `app/` → `docs/` ([sección Entrega 4](#entrega-4--la-aplicación)) |
+
+Para regenerar todo desde cero: levantar el entorno y correr el DAG (secciones 11 a 14), re-ejecutar el notebook de modelado y
+correr `app/build_app.py`.
 
 ## 1. Pregunta
 
@@ -368,6 +382,6 @@ notebooks/entrega_2_eda.ipynb        EDA de la Entrega 2
 notebooks/entrega_3_modelado.ipynb   modelado de la Entrega 3 (corregido)
 app/build_app.py                     genera la app de la Entrega 4 (docs/index.html)
 app/plantilla.html                   plantilla de la página
-docs/                                la app publicada (index.html, data/) + arquitectura, decisiones, diccionario, guías
+docs/                                la app publicada (index.html, data/) + arquitectura, decisiones, diccionario
 tests/                               tests de lógica, Bronze, checks, Silver real y DAG
 ```
