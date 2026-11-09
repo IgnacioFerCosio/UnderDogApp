@@ -338,16 +338,24 @@ def casos_ejemplo(df: pd.DataFrame) -> list[dict]:
     elegidos += [(r, "apuesta que salió") for _, r in apuesta_ganada.iterrows()]
     elegidos += [(r, "sorpresa que nadie vio") for _, r in sorpresas.iterrows()]
     elegidos += [(r, "") for _, r in test.sample(3, random_state=42).iterrows()]
-    casos = []
-    for r, etiqueta in elegidos:
-        casos.append({
-            "etiqueta": etiqueta, "local": r["equipo_local"], "visitante": r["equipo_visitante"],
-            "nombre": f"{r['equipo_local']} – {r['equipo_visitante']} ({r['fecha']:%d/%m/%Y})",
-            "resultado": f"Terminó {r['goles_local']}–{r['goles_visitante']}",
-            "cuotas": [float(r["odds_home"]), float(r["odds_draw"]), float(r["odds_away"])],
-            "gaps": {c: (None if pd.isna(r[c]) else round(float(r[c]), 2)) for c in NOMBRES_GAPS},
-        })
-    return casos
+    return [caso(r, etiqueta) for r, etiqueta in elegidos]
+
+
+def caso(r: pd.Series, etiqueta: str = "") -> dict:
+    """Un partido real, con todo lo que «Probá el modelo» necesita para cargarlo."""
+    return {
+        "etiqueta": etiqueta, "liga": LIGAS.get(r["liga"], r["liga"]), "fecha": r["fecha"].strftime("%d/%m/%Y"),
+        "local": r["equipo_local"], "visitante": r["equipo_visitante"],
+        "resultado": f"Terminó {r['goles_local']}–{r['goles_visitante']}",
+        "cuotas": [float(r["odds_home"]), float(r["odds_draw"]), float(r["odds_away"])],
+        "gaps": {c: (None if pd.isna(r[c]) else round(float(r[c]), 4)) for c in NOMBRES_GAPS},
+    }
+
+
+def partidos_del_test(df: pd.DataFrame) -> list[dict]:
+    """Todos los partidos de la temporada de test (los que el modelo final nunca vio), para elegir por liga y equipo."""
+    test = df[df["temporada"] == TEST_TEMPORADA].sort_values(["fecha", "match_id"])
+    return [caso(r) for _, r in test.iterrows()]
 
 
 # ----------------------------------------------------------------------------- página
@@ -365,6 +373,7 @@ def construir() -> None:
     explorar = partidos_para_explorar(afuera)
     (SALIDA / "data").mkdir(parents=True, exist_ok=True)
     explorar.to_json(SALIDA / "data" / "partidos.json", orient="records", force_ascii=False)
+    (SALIDA / "data" / "partidos_test.json").write_text(json.dumps(partidos_del_test(df), ensure_ascii=False), encoding="utf-8")
     (SALIDA / ".nojekyll").write_text("", encoding="utf-8")
 
     g_datos, n_datos = grafico_datos(df)

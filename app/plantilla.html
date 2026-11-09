@@ -97,6 +97,16 @@ code{font-size:.84em;background:#f0eee8;padding:1px 6px;border-radius:5px}
 .cambio b{color:var(--tinta)}
 
 /* probá el modelo */
+.buscador{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:14px 0 6px}
+@media (max-width:760px){.buscador{grid-template-columns:1fr}}
+.buscador label{display:flex;flex-direction:column;gap:5px;font-size:.74rem;font-weight:600;color:var(--suave);text-transform:uppercase;letter-spacing:.06em}
+.buscador select{min-width:0;width:100%}
+.buscador select:disabled{opacity:.55;cursor:not-allowed}
+.nota-chips{margin:16px 0 0;font-size:.85rem;color:var(--suave)}
+.nombres{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.nombres label{font-size:.75rem;font-weight:600;color:var(--suave);text-transform:uppercase;letter-spacing:.05em}
+.nombres input{width:100%;font:inherit;font-size:.95rem;padding:8px 10px;border:1px solid #d3d8dd;border-radius:10px;margin-top:4px}
+.nombres input:focus{border-color:var(--modelo);outline:none}
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 18px}
 .chip{font:inherit;font-size:.85rem;border:1px solid #d3d8dd;background:#fff;color:var(--tinta);border-radius:99px;padding:7px 14px;cursor:pointer;transition:.15s;display:flex;align-items:center;gap:8px}
 .chip:hover{border-color:var(--modelo)}.chip.activo{background:var(--modelo);border-color:var(--modelo);color:#fff}
@@ -264,11 +274,22 @@ footer b{color:#fff}
 <section id="proba" class="copa"><div class="env">
  <div class="etiqueta"><i>5</i>Probá el modelo</div>
  <h2>Cargá un partido: el modelo te dice qué chance tiene el underdog y si vale la pena apostarle</h2>
- <div class="texto"><p class="lead">Empezá por un partido real de la temporada de test, o escribí las cuotas de cualquier partido y mové los deslizadores.</p></div>
+ <div class="texto"><p class="lead">Tres formas: buscá cualquier partido de la temporada 2015/16 (la que el modelo nunca vio) por liga y equipo,
+ tocá uno de los ejemplos, o inventá un partido escribiendo los equipos, las cuotas y moviendo los deslizadores.</p></div>
+ <div class="buscador">
+  <label>Liga<select class="lindo" id="b_liga"><option value="">Elegí una liga</option></select></label>
+  <label>Equipo<select class="lindo" id="b_equipo" disabled><option value="">Primero elegí la liga</option></select></label>
+  <label>Partido<select class="lindo" id="b_partido" disabled><option value="">Primero elegí el equipo</option></select></label>
+ </div>
+ <p class="nota-chips">O probá un ejemplo:</p>
  <div class="chips" id="chips"></div>
  <div class="panel">
   <div class="caja">
-   <h3>Las cuotas del partido</h3><p class="nota">Como las muestra cualquier casa de apuestas (cuota decimal).</p>
+   <h3>El partido</h3><p class="nota">Los equipos (sólo para mostrarlos: el modelo no usa los nombres) y las cuotas, como las muestra cualquier casa de apuestas.</p>
+   <div class="nombres">
+    <label>Local<input id="n_local" type="text" placeholder="Equipo local"></label>
+    <label>Visitante<input id="n_visit" type="text" placeholder="Equipo visitante"></label>
+   </div>
    <div class="cuotas">
     <label>Local<input id="c_local" type="number" step="0.01" min="1.01" value="1.80"></label>
     <label>Empate<input id="c_empate" type="number" step="0.01" min="1.01" value="3.60"></label>
@@ -390,15 +411,47 @@ CASOS.forEach((c, i) => chips.insertAdjacentHTML("beforeend",
 chips.addEventListener("click", e => { const b = e.target.closest(".chip"); if (b) cargarCaso(+b.dataset.i); });
 let casoActual = null;
 function cargarCaso(i) {
-  const c = CASOS[i]; casoActual = c;
   document.querySelectorAll(".chip").forEach(b => b.classList.toggle("activo", +b.dataset.i === i));
+  cargar(CASOS[i]);
+}
+function cargar(c) {
+  casoActual = c;
+  document.getElementById("n_local").value = c.local;
+  document.getElementById("n_visit").value = c.visitante;
   ["c_local", "c_empate", "c_visit"].forEach((id, k) => document.getElementById(id).value = c.cuotas[k].toFixed(2));
   for (const k of Object.keys(M.numericas)) document.getElementById(k).value = c.gaps[k] == null ? M.numericas[k].mediana : c.gaps[k];
   calcular();
 }
-document.querySelectorAll("#proba input").forEach(el => el.addEventListener("input", () => {
+
+// --- buscador: liga -> equipo -> partido, sobre todos los partidos de la temporada de test (se cargan aparte, una sola vez)
+const bLiga = document.getElementById("b_liga"), bEquipo = document.getElementById("b_equipo"), bPartido = document.getElementById("b_partido");
+let TEST = [];
+fetch("data/partidos_test.json").then(r => r.json()).then(datos => {
+  TEST = datos;
+  [...new Set(TEST.map(p => p.liga))].sort().forEach(l => bLiga.insertAdjacentHTML("beforeend", `<option>${l}</option>`));
+});
+const opciones_ = (sel, texto, items) => { sel.innerHTML = `<option value="">${texto}</option>` + items.join(""); sel.disabled = !items.length; };
+bLiga.addEventListener("change", () => {
+  const equipos = [...new Set(TEST.filter(p => p.liga === bLiga.value).flatMap(p => [p.local, p.visitante]))].sort();
+  opciones_(bEquipo, `Elegí un equipo (${equipos.length})`, equipos.map(e => `<option>${e}</option>`));
+  opciones_(bPartido, "Primero elegí el equipo", []);
+});
+bEquipo.addEventListener("change", () => {
+  const partidos = TEST.map((p, i) => [p, i]).filter(([p]) => p.liga === bLiga.value && (p.local === bEquipo.value || p.visitante === bEquipo.value));
+  opciones_(bPartido, `Elegí un partido (${partidos.length})`,
+    partidos.map(([p, i]) => `<option value="${i}">${p.fecha} · ${p.local} – ${p.visitante}</option>`));
+});
+bPartido.addEventListener("change", () => {
+  if (bPartido.value === "") return;
+  document.querySelectorAll(".chip").forEach(b => b.classList.remove("activo"));
+  cargar(TEST[+bPartido.value]);
+});
+
+// si el usuario toca algo a mano, deja de ser el partido real: se borra el resultado y queda lo que escribió
+document.querySelectorAll("#proba input:not([type=text])").forEach(el => el.addEventListener("input", () => {
   casoActual = null; document.querySelectorAll(".chip").forEach(b => b.classList.remove("activo")); calcular();
 }));
+document.querySelectorAll("#n_local, #n_visit").forEach(el => el.addEventListener("input", () => calcular()));
 
 function calcular() {
   const cuotas = ["c_local", "c_empate", "c_visit"].map(id => parseFloat(document.getElementById(id).value));
@@ -429,7 +482,8 @@ function calcular() {
     vistas.g_probar.data("caso", [{quien: "Según la cuota", p: pUnderdog}, {quien: "Según el modelo", p}])
       .data("equilibrio", [{p: 1 / cuotaUnderdog}]).runAsync();
   }
-  const nombreLocal = casoActual ? casoActual.local : "Local", nombreVisit = casoActual ? casoActual.visitante : "Visitante";
+  const nombreLocal = document.getElementById("n_local").value.trim() || "Local";
+  const nombreVisit = document.getElementById("n_visit").value.trim() || "Visitante";
   const fav = localFavorito ? nombreLocal : nombreVisit, und = localFavorito ? nombreVisit : nombreLocal;
   veredicto.innerHTML = `
     <div class="duelo" style="margin-top:0">
