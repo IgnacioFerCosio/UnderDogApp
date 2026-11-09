@@ -377,6 +377,7 @@ def construir() -> None:
 
     val, test = ficha["validacion"], ficha["test"]
     pct = lambda x, d=1: f"{100 * x:.{d}f}".replace(".", ",") + "%"  # noqa: E731
+    signo = lambda x: f"{100 * x:+.1f}".replace(".", ",").replace("-", "−") + "%"  # noqa: E731  (retornos: siempre con signo)
     num = lambda x, d=3: f"{x:.{d}f}".replace(".", ",")  # noqa: E731
     fecha_datos = json.loads(SILVER_MANIFEST_PATH.read_text(encoding="utf-8")).get("built_at_utc", "")[:10]
 
@@ -389,7 +390,7 @@ def construir() -> None:
         "TASA": pct(df[TARGET_COLUMN].mean()), "N": f"{len(df):,}".replace(",", "."),
         "N_EXPLORAR": f"{len(explorar):,}".replace(",", "."), "AUC_TEST_2": num(test["auc"], 2), "AUC_MERCADO_2": num(test["auc_mercado"], 2),
         "AUC_TEST": num(test["auc"]), "AUC_MERCADO": num(test["auc_mercado"]), "AUC_VAL": num(val["auc_media"]),
-        "AUC_VAL_SD": num(val["auc_desvio"]), "ROI_TODOS": pct(val["roi_todos"]), "ROI_MODELO": pct(val["roi"]),
+        "AUC_VAL_SD": num(val["auc_desvio"]), "ROI_TODOS": signo(val["roi_todos"]), "ROI_MODELO": signo(val["roi"]),
         "ROI_TEST": pct(test["roi"]), "ROI_TODOS_TEST": pct(test["roi_todos"]), "APUESTAS_TEST": str(test["apuestas"]),
         "DATOS_ALTO": pct(n_datos["alto"], 0), "DATOS_BAJO": pct(n_datos["bajo"], 0),
         "XI_BAJO": pct(n_hallazgo["bajo"], 0), "XI_ALTO": pct(n_hallazgo["alto"], 0),
