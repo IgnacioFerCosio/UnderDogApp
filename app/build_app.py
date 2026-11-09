@@ -36,7 +36,8 @@ APUESTA = 100
 VEGA, VEGA_LITE, VEGA_EMBED = "6.2.0", "6.4.1", "7.0.2"
 
 # Los mismos colores que el notebook, con el mismo significado en toda la aplicación
-COLOR = {"modelo": "#0f8b7d", "mercado": "#e08a1e", "todos": "#c0392b", "gano": "#2563a8", "no_gano": "#b9bec7"}
+COLOR = {"modelo": "#0f8b7d", "mercado": "#e08a1e", "todos": "#c0392b", "gano": "#2563a8", "no_gano": "#8b929c",
+         "gano_suave": "#a9c1e0", "fondo_puntos": "#c9ced6", "tinta": "#1e2430", "tinta_suave": "#6b7380"}
 RESULTADO = alt.Scale(domain=["Ganó el underdog", "No ganó"], range=[COLOR["gano"], COLOR["no_gano"]])
 ESTRATEGIA = alt.Scale(domain=["Modelo (apuesta si vale la pena)", "Apostar a todos los underdogs", "Mercado como modelo (no apuesta)"],
                        range=[COLOR["modelo"], COLOR["todos"], COLOR["mercado"]])
@@ -122,42 +123,61 @@ def partidos_para_explorar(df: pd.DataFrame) -> pd.DataFrame:
 
 
 # ----------------------------------------------------------------------------- gráficos del tallo
+def miles(x: float) -> str:
+    return f"{x:+,.1f}".replace(",", "X").replace(".", ",").replace("X", ".").replace("-", "−")
+
+
 def grafico_datos(df: pd.DataFrame) -> tuple[alt.Chart, dict]:
     cortes = [0, 0.4, 0.5, 0.6, 0.7, 0.8, 1]
     etiquetas = ["hasta 40%", "40–50%", "50–60%", "60–70%", "70–80%", "más de 80%"]
     t = (df.assign(tramo=pd.cut(df["prob_favorito"], cortes, labels=etiquetas))
            .groupby("tramo", observed=True)[TARGET_COLUMN].agg(tasa="mean", partidos="size").reset_index())
-    base = alt.Chart(t).encode(
-        x=alt.X("tramo:O", sort=etiquetas, title="Probabilidad de ganar del favorito, según la cuota", axis=alt.Axis(labelAngle=0)),
-        y=alt.Y("tasa:Q", title="Partidos que ganó el underdog", axis=alt.Axis(format="%"), scale=alt.Scale(domain=[0, 0.35])),
-        tooltip=[alt.Tooltip("tramo:O", title="Favorito"), alt.Tooltip("tasa:Q", title="Gana el underdog", format=".1%"),
-                 alt.Tooltip("partidos:Q", title="Partidos", format=",")])
-    barras = base.mark_bar(color=COLOR["gano"], cornerRadiusTopLeft=3, cornerRadiusTopRight=3)
-    texto = base.mark_text(dy=-8, fontSize=13, fontWeight="bold").encode(text=alt.Text("tasa:Q", format=".0%"))
-    numeros = {"alto": t["tasa"].iloc[0], "bajo": t["tasa"].iloc[-1]}
-    return (barras + texto).properties(width="container", height=300), numeros
+    t["destacado"] = [i in (0, len(t) - 1) for i in range(len(t))]
+    x = alt.X("tramo:O", sort=etiquetas, title="Probabilidad de ganar del favorito, según la cuota",
+              axis=alt.Axis(labelAngle=0, labelFontSize=12))
+    y = alt.Y("tasa:Q", title="Partidos que ganó el underdog", axis=alt.Axis(format="%", tickCount=4),
+              scale=alt.Scale(domain=[0, 0.42]))
+    base = alt.Chart(t).encode(x=x, y=y, tooltip=[
+        alt.Tooltip("tramo:O", title="Favorito"), alt.Tooltip("tasa:Q", title="Gana el underdog", format=".1%"),
+        alt.Tooltip("partidos:Q", title="Partidos", format=",")])
+    barras = base.mark_bar(cornerRadiusTopLeft=5, cornerRadiusTopRight=5, width={"band": 0.72}).encode(
+        color=alt.condition("datum.destacado", alt.value(COLOR["gano"]), alt.value(COLOR["gano_suave"])))
+    numero = base.mark_text(dy=-10, fontSize=14, fontWeight="bold", color=COLOR["tinta"]).encode(text=alt.Text("tasa:Q", format=".0%"))
+    notas = pd.DataFrame([
+        {"tramo": etiquetas[0], "tasa": t["tasa"].iloc[0] + 0.065, "t": f"{round(10 * t['tasa'].iloc[0])} de cada 10"},
+        {"tramo": etiquetas[-1], "tasa": t["tasa"].iloc[-1] + 0.065, "t": f"{round(100 * t['tasa'].iloc[-1])} de cada 100"}])
+    nota = alt.Chart(notas).mark_text(fontSize=13, fontStyle="italic", color=COLOR["gano"]).encode(x=x, y=y, text="t:N")
+    return (barras + numero + nota).properties(width="container", height=320), {"alto": t["tasa"].iloc[0], "bajo": t["tasa"].iloc[-1]}
 
 
 def grafico_hallazgo(df: pd.DataFrame) -> tuple[alt.Chart, dict]:
     q = pd.qcut(df["nofav_xi_overall_mean_gap"], 5)
-    etiquetas = [f"{i.left:+.1f} a {i.right:+.1f}" for i in q.cat.categories]
-    etiquetas[0] = f"{df['nofav_xi_overall_mean_gap'].min():+.1f} a {q.cat.categories[0].right:+.1f}"
+    etiquetas = [f"{i.left:+.1f} a {i.right:+.1f}".replace(".", ",") for i in q.cat.categories]
+    etiquetas[0] = f"{df['nofav_xi_overall_mean_gap'].min():+.1f} a {q.cat.categories[0].right:+.1f}".replace(".", ",")
+    real, cuota = "Victorias reales del underdog", "Lo que esperaba la cuota"
     t = (df.assign(quintil=q.cat.rename_categories(etiquetas))
            .groupby("quintil", observed=True)
-           .agg(**{"Victorias reales del underdog": (TARGET_COLUMN, "mean"),
-                   "Lo que esperaba la cuota": ("prob_no_favorito", "mean"), "partidos": ("match_id", "size")})
+           .agg(**{real: (TARGET_COLUMN, "mean"), cuota: ("prob_no_favorito", "mean"), "partidos": ("match_id", "size")})
            .reset_index().melt(id_vars=["quintil", "partidos"], var_name="serie", value_name="valor"))
-    escala = alt.Scale(domain=["Victorias reales del underdog", "Lo que esperaba la cuota"], range=[COLOR["gano"], COLOR["mercado"]])
-    lineas = alt.Chart(t).mark_line(point=alt.OverlayMarkDef(size=80), strokeWidth=3).encode(
-        x=alt.X("quintil:O", sort=etiquetas, title="Rating medio del XI: underdog − favorito (cinco grupos de igual tamaño)",
-                axis=alt.Axis(labelAngle=0)),
-        y=alt.Y("valor:Q", title="Proporción", axis=alt.Axis(format="%"), scale=alt.Scale(domain=[0, 0.32])),
-        color=alt.Color("serie:N", scale=escala, title=None, legend=alt.Legend(orient="top-left")),
-        strokeDash=alt.condition(alt.datum.serie == "Lo que esperaba la cuota", alt.value([6, 4]), alt.value([1, 0])),
+    escala = alt.Scale(domain=[real, cuota], range=[COLOR["gano"], COLOR["mercado"]])
+    x = alt.X("quintil:O", sort=etiquetas, title="Rating medio del XI: underdog − favorito (cinco grupos de igual tamaño)",
+              axis=alt.Axis(labelAngle=0, labelFontSize=12))
+    y = alt.Y("valor:Q", title="Proporción", axis=alt.Axis(format="%", tickCount=4), scale=alt.Scale(domain=[0, 0.34]))
+    lineas = alt.Chart(t).mark_line(point=alt.OverlayMarkDef(size=90, filled=True), strokeWidth=3.5).encode(
+        x=x, y=y, color=alt.Color("serie:N", scale=escala, legend=None),
+        strokeDash=alt.condition(alt.datum.serie == cuota, alt.value([7, 5]), alt.value([1, 0])),
         tooltip=[alt.Tooltip("quintil:O", title="Diferencia de rating"), alt.Tooltip("serie:N", title="Serie"),
                  alt.Tooltip("valor:Q", title="Valor", format=".1%"), alt.Tooltip("partidos:Q", title="Partidos", format=",")])
-    real = t[t["serie"] == "Victorias reales del underdog"]["valor"]
-    return lineas.properties(width="container", height=300), {"bajo": real.iloc[0], "alto": real.iloc[-1]}
+    # etiquetas directas en el primer grupo, en lugar de una leyenda: la cuota arriba, lo real abajo
+    claves = pd.DataFrame({"quintil": [etiquetas[0]] * 2, "valor": [0.315, 0.285],
+                           "serie": [real, cuota], "t": ["━  " + real, "╍  " + cuota]})
+    rotulos = alt.Chart(claves).mark_text(align="left", dx=-30, fontSize=13, fontWeight="bold").encode(
+        x=x, y=y, text="t:N", color=alt.Color("serie:N", scale=escala, legend=None))
+    lo_real = t[t["serie"] == real]["valor"]
+    nota = alt.Chart(pd.DataFrame({"quintil": [etiquetas[3]], "valor": [0.07],
+                                   "t": ["las dos líneas casi se pisan: el precio ya traía la calidad del once"]})).mark_text(
+        fontSize=13, fontStyle="italic", color=COLOR["tinta_suave"]).encode(x=x, y=y, text="t:N")
+    return (lineas + rotulos + nota).properties(width="container", height=320), {"bajo": lo_real.iloc[0], "alto": lo_real.iloc[-1]}
 
 
 def grafico_modelo(d: pd.DataFrame) -> alt.Chart:
@@ -172,46 +192,58 @@ def grafico_modelo(d: pd.DataFrame) -> alt.Chart:
     diario = d.groupby("fecha")[estr].sum().cumsum().div(1000).reset_index()
     largo = diario.melt(id_vars="fecha", var_name="estrategia", value_name="ganancia")
     largo["fecha"] = largo["fecha"].dt.strftime("%Y-%m-%d")
-    lineas = alt.Chart(largo).mark_line(strokeWidth=2.5).encode(
-        x=alt.X("fecha:T", title="Fecha del partido (siempre predicho por un modelo que no lo había visto)",
-                axis=alt.Axis(format="%Y", tickCount="year")),
-        y=alt.Y("ganancia:Q", title="Ganancia acumulada (miles de $, apostando $100 por partido)"),
-        color=alt.Color("estrategia:N", scale=ESTRATEGIA, title=None, legend=alt.Legend(orient="bottom-left")),
+    x = alt.X("fecha:T", title=None, axis=alt.Axis(format="%Y", tickCount="year", grid=False))
+    y = alt.Y("ganancia:Q", title="Ganancia acumulada (miles de $, apostando $100 por partido)", axis=alt.Axis(tickCount=5))
+    color = alt.Color("estrategia:N", scale=ESTRATEGIA, legend=None)
+    lineas = alt.Chart(largo).mark_line(strokeWidth=3).encode(
+        x=x, y=y, color=color,
         tooltip=[alt.Tooltip("fecha:T", title="Fecha", format="%d/%m/%Y"), alt.Tooltip("estrategia:N", title="Estrategia"),
                  alt.Tooltip("ganancia:Q", title="Acumulado (miles de $)", format=",.1f")])
-    inicio_test = pd.DataFrame({"fecha": [test["fecha"].min().strftime("%Y-%m-%d")], "texto": ["empieza el test 2015/16"]})
-    regla = alt.Chart(inicio_test).mark_rule(strokeDash=[3, 3], color="#555").encode(x="fecha:T")
-    rotulo = alt.Chart(inicio_test.assign(y=-60)).mark_text(align="right", dx=-6, color="#555").encode(
-        x="fecha:T", y="y:Q", text="texto:N")
-    return (lineas + regla + rotulo).properties(width="container", height=320)
+    # etiqueta directa al final de cada línea, con cuánto terminó
+    fin = largo[largo["fecha"] == largo["fecha"].max()].set_index("estrategia")["ganancia"]
+    fechas = sorted(largo["fecha"].unique())
+    en = lambda q: fechas[int(q * (len(fechas) - 1))]  # noqa: E731
+    rot = pd.DataFrame([
+        {"estrategia": estr[0], "fecha": en(0.30), "ganancia": 9.0, "t": f"Modelo: termina en {miles(fin[estr[0]])} mil $"},
+        {"estrategia": estr[2], "fecha": en(0.30), "ganancia": -8.0, "t": "Mercado como modelo: nunca apuesta (0 $)"},
+        {"estrategia": estr[1], "fecha": en(0.22), "ganancia": float(largo[(largo["estrategia"] == estr[1]) & (largo["fecha"] == en(0.22))]["ganancia"].iloc[0]) + 18,
+         "t": f"Apostar a todos los underdogs: termina en {miles(fin[estr[1]])} mil $"}])
+    rotulos = alt.Chart(rot).mark_text(align="left", fontSize=13, fontWeight="bold").encode(x=x, y=y, text="t:N", color=color)
+    inicio = pd.DataFrame({"fecha": [test["fecha"].min().strftime("%Y-%m-%d")], "ganancia": [-45.0], "t": ["test 2015/16 →"]})
+    regla = alt.Chart(inicio).mark_rule(strokeDash=[3, 3], color=COLOR["tinta_suave"]).encode(x="fecha:T")
+    rotulo = alt.Chart(inicio).mark_text(align="right", dx=-6, color=COLOR["tinta_suave"], fontSize=12).encode(x=x, y=y, text="t:N")
+    return (lineas + regla + rotulo + rotulos).properties(width="container", height=340)
 
 
 # ----------------------------------------------------------------------------- la copa
 def grafico_explorar(ligas: list[str], temporadas: list[str]) -> alt.Chart:
+    """Ancho fijo de referencia: la página lo ajusta al ancho de la pantalla antes de dibujarlo (ver plantilla)."""
     datos = alt.UrlData("data/partidos.json")
-    liga = alt.param(name="liga", value=None, bind=alt.binding_select(options=[None] + ligas, labels=["Todas"] + ligas, name="Liga  "))
+    liga = alt.param(name="liga", value=None, bind=alt.binding_select(options=[None] + ligas, labels=["Todas las ligas"] + ligas, name="Liga"))
     temporada = alt.param(name="temporada", value=None,
-                          bind=alt.binding_select(options=[None] + temporadas, labels=["Todas"] + temporadas, name="Temporada  "))
+                          bind=alt.binding_select(options=[None] + temporadas, labels=["Todas las temporadas"] + temporadas, name="Temporada"))
     zona = alt.selection_interval(name="zona", encodings=["x", "y"])
     filtro = "(liga == null || datum.liga == liga) && (temporada == null || datum.temporada == temporada)"
+    x = alt.X("prob_mercado:Q", title="Probabilidad del underdog según la cuota", axis=alt.Axis(format="%"), scale=alt.Scale(domain=[0, 0.36]))
+    y = alt.Y("valor:Q", title="Valor esperado de apostarle, según el modelo", axis=alt.Axis(format="+%"), scale=alt.Scale(domain=[-0.4, 0.3]))
+    detalle = [alt.Tooltip("fecha:T", title="Fecha", format="%d/%m/%Y"), alt.Tooltip("liga:N", title="Liga"),
+               alt.Tooltip("partido:N", title="Partido"), alt.Tooltip("underdog:N", title="Underdog"),
+               alt.Tooltip("cuota:Q", title="Cuota del underdog", format=".2f"),
+               alt.Tooltip("prob_mercado:Q", title="Prob. según la cuota", format=".1%"),
+               alt.Tooltip("prob_modelo:Q", title="Prob. según el modelo", format=".1%"),
+               alt.Tooltip("decision:N", title="El modelo")]
 
-    puntos = alt.Chart(datos).mark_circle(size=14, opacity=0.45).encode(
-        x=alt.X("prob_mercado:Q", title="Probabilidad del underdog según la cuota", axis=alt.Axis(format="%"),
-                scale=alt.Scale(domain=[0, 0.5])),
-        y=alt.Y("valor:Q", title="Valor esperado de apostarle (según el modelo)", axis=alt.Axis(format="+%"),
-                scale=alt.Scale(domain=[-0.4, 0.3])),
-        color=alt.Color("resultado:N", scale=RESULTADO, title="Qué pasó", legend=alt.Legend(orient="top")),
-        tooltip=[alt.Tooltip("fecha:T", title="Fecha", format="%d/%m/%Y"), alt.Tooltip("liga:N", title="Liga"),
-                 alt.Tooltip("partido:N", title="Partido"), alt.Tooltip("favorito:N", title="Favorito"),
-                 alt.Tooltip("underdog:N", title="Underdog"), alt.Tooltip("cuota:Q", title="Cuota del underdog", format=".2f"),
-                 alt.Tooltip("prob_mercado:Q", title="Prob. según la cuota", format=".1%"),
-                 alt.Tooltip("prob_modelo:Q", title="Prob. según el modelo", format=".1%"),
-                 alt.Tooltip("valor:Q", title="Valor esperado", format="+.1%"), alt.Tooltip("decision:N", title="El modelo"),
-                 alt.Tooltip("gap_xi:Q", title="Dif. rating del XI", format="+.1f"), alt.Tooltip("conjunto:N", title="Conjunto")],
-    ).add_params(liga, temporada, zona).transform_filter(filtro).properties(width=760, height=380)
-    cero = alt.Chart(pd.DataFrame({"y": [0]})).mark_rule(color=COLOR["modelo"], strokeDash=[5, 4]).encode(y="y:Q")
-    rotulo = alt.Chart(pd.DataFrame({"y": [0], "t": ["por encima de esta línea, el modelo apuesta"]})).mark_text(
-        align="left", x=6, dy=-8, color=COLOR["modelo"], fontWeight="bold").encode(y="y:Q", text="t:N")
+    fondo = alt.Chart(datos).transform_filter(filtro).transform_filter("datum.apuesta == 0").mark_circle(
+        size=10, opacity=0.35, color=COLOR["fondo_puntos"], clip=True).encode(x=x, y=y, tooltip=detalle)
+    apuestas = alt.Chart(datos).transform_filter(filtro).transform_filter("datum.apuesta == 1").mark_circle(
+        size=38, opacity=0.85, stroke="white", strokeWidth=0.6, clip=True).encode(
+        x=x, y=y, tooltip=detalle,
+        color=alt.Color("resultado:N", scale=RESULTADO, title="Apuestas del modelo",
+                        legend=alt.Legend(orient="top-left", direction="horizontal", titleFontSize=12, labelFontSize=12)))
+    cero = alt.Chart(pd.DataFrame({"y": [0]})).mark_rule(color=COLOR["modelo"], strokeWidth=1.5, strokeDash=[6, 4]).encode(y="y:Q")
+    rotulo = alt.Chart(pd.DataFrame({"y": [0], "t": ["arriba de esta línea, el modelo apuesta"]})).mark_text(
+        align="left", x=6, dy=-9, color=COLOR["modelo"], fontWeight="bold", fontSize=12).encode(y="y:Q", text="t:N")
+    nube = (fondo + apuestas + cero + rotulo).add_params(liga, temporada, zona).properties(width=760, height=400)
 
     plata = alt.Chart(datos).transform_filter(filtro).transform_filter(zona).transform_calculate(
         todos=f"{APUESTA} * (datum.cuota * datum.gano - 1)"
@@ -221,24 +253,24 @@ def grafico_explorar(ligas: list[str], temporadas: list[str]) -> alt.Chart:
         "Apostar a todos los underdogs": f"100 * datum.suma_todos / ({APUESTA} * datum.partidos)",
         "Modelo (apuesta si vale la pena)": f"datum.apuestas > 0 ? 100 * datum.suma_modelo / ({APUESTA} * datum.apuestas) : 0",
     }).transform_fold(["Modelo (apuesta si vale la pena)", "Apostar a todos los underdogs"], as_=["estrategia", "roi"])
-    barras = plata.mark_bar(height=26).encode(
-        y=alt.Y("estrategia:N", title=None, sort=list(ESTRATEGIA.domain), axis=alt.Axis(labelLimit=260)),
-        x=alt.X("roi:Q", title="Retorno por cada $100 apostados (%), en lo que está filtrado",
-                scale=alt.Scale(domain=[-40, 40], clamp=True)),
+    escala_roi = alt.Scale(domain=[-40, 40], clamp=True)
+    barras = plata.mark_bar(height=24, cornerRadius=3).encode(
+        y=alt.Y("estrategia:N", title=None, sort=list(ESTRATEGIA.domain),
+              axis=alt.Axis(labelFontSize=12, labelFontWeight="bold", labelExpr="indexof(datum.label, 'Modelo') == 0 ? 'Modelo' : 'Apostar a todos'")),
+        x=alt.X("roi:Q", title="Retorno por cada $100 apostados (%), en lo filtrado", scale=escala_roi),
         color=alt.Color("estrategia:N", scale=ESTRATEGIA, legend=None),
         tooltip=[alt.Tooltip("estrategia:N", title="Estrategia"), alt.Tooltip("roi:Q", title="Retorno %", format="+.1f"),
                  alt.Tooltip("partidos:Q", title="Partidos filtrados", format=","),
                  alt.Tooltip("apuestas:Q", title="Apuestas del modelo", format=",")])
-    texto = plata.mark_text(align="left", dx=6, fontWeight="bold").encode(
-        y=alt.Y("estrategia:N", sort=list(ESTRATEGIA.domain)), x=alt.X("roi:Q", scale=alt.Scale(domain=[-40, 40], clamp=True)),
-        text=alt.Text("roi:Q", format="+.1f"))
+    texto = plata.mark_text(align="left", dx=6, fontWeight="bold", fontSize=13).encode(
+        y=alt.Y("estrategia:N", sort=list(ESTRATEGIA.domain)), x=alt.X("roi:Q", scale=escala_roi), text=alt.Text("roi:Q", format="+.1f"))
     resumen = alt.Chart(datos).transform_filter(filtro).transform_filter(zona).transform_aggregate(
         partidos="count()", apuestas="sum(apuesta)").transform_calculate(
-        t="format(datum.partidos, ',') + ' partidos filtrados · el modelo apuesta en ' + format(datum.apuestas, ',')"
-    ).mark_text(align="left", fontSize=13, color="#333").encode(text="t:N").properties(width=760, height=18)
-    cero_roi = alt.Chart(pd.DataFrame({"x": [0]})).mark_rule(color="#555").encode(x="x:Q")
-    return alt.vconcat((puntos + cero + rotulo), resumen,
-                       (barras + texto + cero_roi).properties(width=760, height=90)).resolve_scale(color="independent")
+        t="format(datum.partidos, ',') + ' partidos en la selección · el modelo apuesta en ' + format(datum.apuestas, ',')"
+    ).mark_text(align="left", fontSize=13, fontWeight="bold", color=COLOR["tinta"]).encode(text="t:N").properties(width=760, height=20)
+    cero_roi = alt.Chart(pd.DataFrame({"x": [0]})).mark_rule(color=COLOR["tinta_suave"]).encode(x="x:Q")
+    return alt.vconcat(nube, resumen, (barras + texto + cero_roi).properties(width=760, height=80),
+                       spacing=14).resolve_scale(color="independent")
 
 
 def grafico_probar() -> alt.Chart:
@@ -299,11 +331,17 @@ def embudo() -> str:
 def casos_ejemplo(df: pd.DataFrame) -> list[dict]:
     test = df[df["temporada"] == TEST_TEMPORADA].copy()
     test["valor"] = test["prob_modelo"] * test["cuota_underdog"] - 1
-    sorpresa = test.loc[test[TARGET_COLUMN] == 1, "prob_modelo"].idxmin()   # la sorpresa más grande del test
-    elegidos = pd.concat([test.nlargest(3, "valor"), test.loc[[sorpresa]], test.sample(6, random_state=42)]).drop_duplicates("match_id")
+    sorpresas = test[test[TARGET_COLUMN] == 1].nsmallest(2, "prob_modelo")      # las dos sorpresas más grandes del test
+    mas_valor = test.nlargest(2, "valor")                                        # las apuestas que el modelo más quería
+    apuesta_ganada = test[(test["valor"] > 0) & (test[TARGET_COLUMN] == 1)].nlargest(1, "valor")
+    elegidos = [(r, "la apuesta con más valor") for _, r in mas_valor.iterrows()]
+    elegidos += [(r, "apuesta que salió") for _, r in apuesta_ganada.iterrows()]
+    elegidos += [(r, "sorpresa que nadie vio") for _, r in sorpresas.iterrows()]
+    elegidos += [(r, "") for _, r in test.sample(3, random_state=42).iterrows()]
     casos = []
-    for _, r in elegidos.iterrows():
+    for r, etiqueta in elegidos:
         casos.append({
+            "etiqueta": etiqueta, "local": r["equipo_local"], "visitante": r["equipo_visitante"],
             "nombre": f"{r['equipo_local']} – {r['equipo_visitante']} ({r['fecha']:%d/%m/%Y})",
             "resultado": f"Terminó {r['goles_local']}–{r['goles_visitante']}",
             "cuotas": [float(r["odds_home"]), float(r["odds_draw"]), float(r["odds_away"])],
