@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>¿Gana el underdog?</title>
+<meta name="description" content="Proyecto integrador de Ciencia de Datos (UTN FRM, 5K10): las cuotas, los jugadores y un modelo que decide cuándo apostarle al no favorito.">
+<script src="https://cdn.jsdelivr.net/npm/vega@{{VEGA}}"></script>
+<script src="https://cdn.jsdelivr.net/npm/vega-lite@{{VEGA_LITE}}"></script>
+<script src="https://cdn.jsdelivr.net/npm/vega-embed@{{VEGA_EMBED}}"></script>
+<style>
+:root{--bg:#fbfaf7;--tx:#1e2430;--mut:#5f6876;--line:#e4e2dc;--card:#fff;--modelo:#0f8b7d;--mercado:#e08a1e;--todos:#c0392b;--gano:#2563a8;--warn:#9a5b00;--warnbg:#fff4e2}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:17px/1.65 Georgia,"Iowan Old Style","Times New Roman",serif}
+h1,h2,h3,.ui,nav,table,summary,label,button,input,select,.kicker,.cifra,.nota{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+.envoltura{max-width:880px;margin:auto;padding:0 16px}
+nav{position:sticky;top:0;z-index:5;background:rgba(251,250,247,.95);backdrop-filter:blur(4px);border-bottom:1px solid var(--line)}
+nav .envoltura{display:flex;gap:18px;overflow-x:auto;padding-top:10px;padding-bottom:10px;font-size:.88rem}
+nav a{color:var(--mut);text-decoration:none;white-space:nowrap}nav a:hover{color:var(--modelo)}
+nav .marca{color:var(--tx);font-weight:700;margin-right:auto}
+header{padding:64px 0 36px;border-bottom:1px solid var(--line)}
+.kicker{text-transform:uppercase;letter-spacing:.12em;font-size:.78rem;color:var(--modelo);font-weight:700}
+h1{font-size:clamp(2rem,5vw,3.1rem);line-height:1.12;margin:.3em 0 .4em}
+.tesis{font-size:1.32rem;line-height:1.5;margin:0 0 30px}
+.cifras{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.cifra{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+.cifra b{display:block;font-size:2rem;line-height:1.1}
+.cifra span{color:var(--mut);font-size:.9rem}
+section{padding:56px 0 30px;border-bottom:1px solid var(--line)}
+.paso{font-family:system-ui,sans-serif;font-size:.8rem;color:var(--mut);text-transform:uppercase;letter-spacing:.1em}
+h2{font-size:clamp(1.45rem,3.4vw,2rem);line-height:1.22;margin:.25em 0 .6em}
+.grafico{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin:20px 0;overflow-x:auto}
+.grafico .vega-embed{width:100%}
+.nota{font-size:.9rem;color:var(--mut)}
+details{background:var(--card);border:1px solid var(--line);border-radius:10px;margin:18px 0}
+summary{cursor:pointer;padding:12px 16px;font-weight:600;font-size:.95rem;list-style:none}
+summary::before{content:"▸  ";color:var(--modelo)}details[open] summary::before{content:"▾  "}
+details>div{padding:0 18px 16px;font-size:.96rem}
+details h3{font-size:1rem;margin:18px 0 6px}
+.tbl{overflow-x:auto;margin:8px 0}
+table{border-collapse:collapse;width:100%;font-size:.84rem}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--mut);font-weight:600}
+code{font-size:.82em;background:#f1efe9;padding:1px 5px;border-radius:4px}
+.copa{background:#f2f6f5}
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin:16px 0}
+.form label{display:flex;flex-direction:column;font-size:.82rem;color:var(--mut);gap:4px}
+.form input,.ui select{font:inherit;font-size:.95rem;padding:7px 9px;border:1px solid #cfd3d9;border-radius:8px;background:#fff;color:var(--tx)}
+.form input.fuera{border-color:var(--todos);background:#fdecea}
+.ui{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:10px 0}
+button{font:inherit;font-size:.9rem;padding:8px 14px;border-radius:8px;border:1px solid var(--modelo);background:var(--modelo);color:#fff;cursor:pointer}
+button.sec{background:#fff;color:var(--modelo)}
+.veredicto{font-family:system-ui,sans-serif;border-radius:12px;padding:14px 18px;margin:14px 0;font-size:1.05rem;border:1px solid var(--line);background:#fff}
+.veredicto b{font-size:1.2rem}
+.aviso{font-family:system-ui,sans-serif;background:var(--warnbg);color:var(--warn);border-radius:10px;padding:10px 14px;margin:10px 0;font-size:.92rem;display:none}
+.vega-bindings{font-family:system-ui,sans-serif;font-size:.9rem;display:flex;gap:18px;flex-wrap:wrap;margin:8px 0 4px}
+.vega-bindings select{font:inherit;padding:5px 8px;border-radius:8px;border:1px solid #cfd3d9}
+footer{padding:40px 0 70px;color:var(--mut);font-size:.9rem;font-family:system-ui,sans-serif}
+@media (max-width:600px){body{font-size:16px}header{padding:40px 0 26px}}
+</style>
+</head>
+<body>
+<nav><div class="envoltura">
+ <span class="marca">¿Gana el underdog?</span>
+ <a href="#datos">Los datos</a><a href="#hallazgo">Lo que encontramos</a><a href="#modelo">El modelo</a>
+ <a href="#explora">Explorá</a><a href="#proba">Probá el modelo</a>
+</div></nav>
+
+<header><div class="envoltura">
+ <div class="kicker">Proyecto integrador · Ciencia de Datos · UTN FRM · 5K10</div>
+ <h1>¿Ganará el no favorito el próximo partido?</h1>
+ <p class="tesis">Las cuotas de las casas de apuestas ya saben casi todo lo que dicen los jugadores: un modelo con los ratings de
+ los titulares ordena los partidos igual que el mercado, pero es el único que elige a qué underdog apostarle sin perder el margen de la casa.</p>
+ <div class="cifras">
+  <div class="cifra"><b>{{TASA}}</b><span>de {{N}} partidos de 9 ligas europeas (2008–2016) los ganó el underdog</span></div>
+  <div class="cifra"><b>{{AUC_TEST_2}} ≈ {{AUC_MERCADO_2}}</b><span>el modelo ordena los partidos del test igual que la cuota (AUC; 0,5 sería adivinar)</span></div>
+  <div class="cifra"><b>{{ROI_TODOS}} → {{ROI_MODELO}}</b><span>retorno de apostarle a todos los underdogs contra apostar sólo donde el modelo ve valor</span></div>
+ </div>
+</div></header>
+
+<!-- TALLO 1 · LOS DATOS -->
+<section id="datos"><div class="envoltura">
+ <div class="paso">1 · Los datos</div>
+ <h2>Cuanto más claro es el favorito, menos gana el underdog: del {{DATOS_ALTO}} de los partidos parejos al {{DATOS_BAJO}} cuando el favorito es abrumador</h2>
+ <p>Cada partido tiene un favorito y un underdog según las cuotas de las casas de apuestas. La cuota se traduce en una probabilidad,
+ y esa probabilidad acierta: los underdogs ganan mucho más seguido cuando el partido es parejo que cuando enfrentan a un gigante.</p>
+ <div class="grafico"><div id="g_datos"></div></div>
+ <p class="nota">Cada barra agrupa los partidos según la probabilidad que la cuota le daba al favorito. La altura es la proporción
+ de esos partidos que terminó ganando el underdog; el número es el porcentaje.</p>
+ <details><summary>Cómo lo sabemos</summary><div>
+  <h3>De dónde salen los datos</h3>
+  <p>De la <a href="https://www.kaggle.com/datasets/hugomathien/soccer">European Soccer Database</a> (Kaggle): partidos con
+  cuotas 1X2 de 10 casas, la alineación titular real y los ratings FIFA de cada jugador a lo largo del tiempo. La base se carga
+  una vez en PostgreSQL y un DAG de Airflow la consulta por una Airflow Connection: Bronze (lo que devuelve cada consulta, sin tocar)
+  → Silver (el dataset para modelar). Datos generados por el pipeline el {{FECHA_DATOS}}.</p>
+  <h3>Qué es una fila</h3>
+  <p>Un partido. El objetivo es <code>gano_no_favorito</code>: 1 si ganó el underdog, 0 si empató o perdió. El favorito es el equipo
+  con mayor probabilidad implícita de ganar (la cuota sin el margen de la casa); el empate no es un equipo.</p>
+  <h3>Qué se filtró, paso por paso</h3>
+  {{EMBUDO}}
+  <p>El último filtro (diferencia &gt; 0,05) no es arbitrario: por debajo, quién es el underdog depende de qué casa de apuestas se mire
+  (Pinnacle y Bet365 eligen distinto favorito en el 54% de los partidos casi parejos, y en el 0% desde 0,045).</p>
+  <h3>Qué se descartó por fuga</h3>
+  <p>Todo lo que sólo existe después del partido queda fuera del dataset de modelado: {{FUGA}}. Los goles se usan una única vez,
+  para construir el objetivo, y quedan en una tabla de auditoría aparte. El DAG falla si alguna aparece en Silver.</p>
+ </div></details>
+</div></section>
+
+<!-- TALLO 2 · LO QUE ENCONTRAMOS -->
+<section id="hallazgo"><div class="envoltura">
+ <div class="paso">2 · Lo que encontramos</div>
+ <h2>Un once mejor que el del favorito más que duplica las victorias del underdog ({{XI_BAJO}} → {{XI_ALTO}}), pero la cuota ya lo sabía</h2>
+ <p>Comparamos el rating FIFA medio de los once titulares del underdog contra el del favorito. Cuanto mejor es el once del underdog,
+ más gana. Pero la línea naranja (lo que la cuota esperaba en esos mismos partidos) va pegada a la azul: las casas de apuestas ya
+ ponían en el precio la calidad de los titulares.</p>
+ <div class="grafico"><div id="g_hallazgo"></div></div>
+ <p class="nota">Los partidos se dividen en cinco grupos de igual tamaño según la diferencia de rating del XI (underdog menos favorito;
+ positivo = el underdog tiene mejor once). Para cada grupo: la proporción de victorias reales del underdog (azul) y la probabilidad
+ media que le daba la cuota (naranja, punteada).</p>
+ <details><summary>Cómo lo sabemos</summary><div>
+  <h3>Una hipótesis que se sostuvo</h3>
+  <p><b>H1 · donde dos casas eligen distinto favorito, el partido es parejo.</b> La diferencia de probabilidad entre local y
+  visitante es mucho menor en esos partidos (separación estandarizada 1,43, verde en el semáforo de la cátedra). Se sostuvo, y de ahí
+  sale el umbral de 0,05 que define quién es el underdog.</p>
+  <h3>Una que no</h3>
+  <p><b>H2 · el rating del XI es mayor cuando gana el underdog.</b> Mirado solo, sí (separación 0,36, amarillo). Pero el rating del XI
+  correlaciona 0,66 con la probabilidad del mercado; al controlar por la cuota, la separación cae a 0,03–0,16 (rojo). <b>Refutada:</b>
+  el rating de los titulares no agrega información que la cuota no tenga. Es lo que muestra el gráfico.</p>
+  <h3>Cómo se construyó el gráfico</h3>
+  <p>El rating de cada titular es el de su último registro FIFA <em>estrictamente anterior</em> a la fecha del partido (nunca uno
+  posterior). Se promedian los once de cada lado y se resta favorito a underdog. Los cinco grupos son quintiles: cada uno tiene ~3.600 partidos.</p>
+ </div></details>
+</div></section>
+
+<!-- TALLO 3 · EL MODELO -->
+<section id="modelo"><div class="envoltura">
+ <div class="paso">3 · El modelo</div>
+ <h2>El modelo ordena igual que las cuotas, pero es el único que elige apuestas sin perder el margen de la casa: de {{ROI_TODOS}} a {{ROI_MODELO}}</h2>
+ <p>Si sólo se mira qué tan bien ordena los partidos, ningún modelo le gana a la cuota. La pregunta que sí cambia algo es otra: ¿sirve para
+ decidir? La regla es apostar $100 al underdog sólo cuando el modelo cree que la cuota paga más de lo que el riesgo vale. Apostarle a
+ ciegas a todos los underdogs pierde el margen de la casa, partido tras partido. El modelo apuesta en uno de cada diez partidos y queda cerca de empatar.</p>
+ <div class="grafico"><div id="g_modelo"></div></div>
+ <p class="nota">Ganancia acumulada de cada estrategia a lo largo del tiempo. Hasta mediados de 2015, cada partido lo predice un modelo
+ entrenado sólo con los anteriores (validación temporal); desde la línea punteada es el test, una temporada que el modelo final nunca vio.
+ El «mercado como modelo» no apuesta nunca: su probabilidad no puede superar a la de la cuota.</p>
+ <details><summary>Cómo lo sabemos</summary><div>
+  <h3>Las métricas, y por qué</h3>
+  <p><b>ROC-AUC</b> para saber si el modelo ordena los partidos (0,5 = adivinar). <b>Log-loss</b> para saber si las probabilidades son
+  creíbles. <b>Retorno (ROI)</b> para saber si sirve para decidir: apostar $100 cuando <code>probabilidad del modelo × cuota − 1 &gt; 0</code>,
+  con las cuotas reales (que traen el margen de la casa). La accuracy no sirve: decir siempre «no gana» acierta el 80%.</p>
+  <h3>El piso y la validación</h3>
+  <p>El piso es un modelo que no mira nada (AUC 0,5). La validación imita el uso: <code>TimeSeriesSplit</code> en cinco pedazos sobre
+  2008/09–2014/15, siempre entrenando con el pasado y validando con lo que viene; el test es la temporada 2015/16, mirada una sola vez.</p>
+  <h3>Comparación de modelos (validación temporal, media y desvío de 5 pedazos)</h3>
+  {{T_COMPARACION}}
+  <p>Ninguna familia supera a la logística por más que el desvío. Árbol, random forest y boosting se barrieron en complejidad: pasado un
+  punto, mejoran en lo que vieron y empeoran en lo que no.</p>
+  <h3>Qué aporta cada grupo de columnas (AUC)</h3>
+  {{T_GRUPOS}}
+  <h3>La plata, en validación</h3>
+  {{T_PLATA}}
+  <p>Por pedazo (ROI %), para ver que el resultado es ruidoso:</p>
+  {{T_PEDAZOS}}
+  <p><b>El intervalo de confianza del modelo incluye el cero</b>: no demuestra ganancia. Lo que sí muestra es que deja de perder el margen
+  de la casa, mientras que el bosque y el boosting pierden casi lo mismo que apostar a ciegas.</p>
+  <h3>El modelo elegido y su ajuste</h3>
+  <p>Regresión logística con las 12 columnas (las 2 probabilidades del mercado en escala logit y 10 diferencias de rating del XI),
+  C = {{C}} (elegido por grilla; desde C = 0,1 la AUC ya no cambia). Es una fórmula, así que esta página la calcula en tu navegador.</p>
+  <h3>Resultado en el test (temporada 2015/16, mirada una vez)</h3>
+  {{T_TEST}}
+  <h3>Dónde se equivoca</h3>
+  <p>Adentro de un grupo de partidos con cuotas parecidas, el modelo casi no distingue cuál será la sorpresa: su información es sobre todo
+  la cuota. Las sorpresas más grandes (Bayern 1–2 Mainz, Barcelona 1–2 Valencia) tenían 4–7% para el modelo y para el mercado:
+  con 1 en 20, uno de cada 20 de esos partidos lo gana el chico. Y las apuestas con más valor del test perdieron todas: valor esperado
+  positivo no es ganar, es cobrar más de lo que el riesgo vale en el largo plazo.</p>
+  <h3>En qué se apoya</h3>
+  {{T_COEF}}
+  <p>Casi todo el peso está en la probabilidad del mercado (coeficiente {{COEF_PROB}} sobre su logit, intercepto {{INTERCEPTO}}). Que sea
+  un poco menor que 1 significa que el modelo achica las probabilidades extremas: a los underdogs muy improbables les da algo más que el
+  mercado, y de ahí salen la mayoría de las apuestas. Los coeficientes de los gaps se leen juntos: varios correlacionan entre 0,86 y 0,96
+  y se reparten el peso, por eso alguno tiene signo raro.</p>
+ </div></details>
+</div></section>
+
+<!-- COPA 1 · EXPLORÁ -->
+<section id="explora" class="copa"><div class="envoltura">
+ <div class="paso">4 · Explorá</div>
+ <h2>Los {{N_EXPLORAR}} partidos que el modelo predijo sin haberlos visto, y qué habría hecho en cada uno</h2>
+ <p>Cada punto es un partido, con lo que el modelo sabía hasta ese momento. A la derecha, underdogs con más chance según la cuota; arriba, los que el modelo cree que la cuota paga de
+ más. Por encima de la línea verde, el modelo apuesta. Elegí una liga o una temporada, o <b>arrastrá un rectángulo sobre los puntos</b> para
+ quedarte con una zona: las barras de abajo recalculan cuánto habría ganado cada estrategia en lo que elegiste. Pasá el mouse por un punto para ver el partido.</p>
+ <div class="grafico"><div id="g_explorar"></div></div>
+ <p class="nota">Sólo hay partidos fuera de muestra, para que los números no sean optimistas: de 2010 a 2015, cada partido lo predice
+ un modelo entrenado únicamente con los anteriores (la validación temporal del notebook); los de 2015/16 los predice el modelo final, que
+ nunca los vio. Los de 2008–2010 sólo sirvieron para entrenar. Doble clic sobre el gráfico borra el rectángulo.</p>
+</div></section>
+
+<!-- COPA 2 · PROBÁ EL MODELO -->
+<section id="proba" class="copa"><div class="envoltura">
+ <div class="paso">5 · Probá el modelo</div>
+ <h2>Cargá un partido: el modelo te dice qué chance tiene el underdog y si vale la pena apostarle</h2>
+ <p>Poné las tres cuotas del partido (como las muestra cualquier casa de apuestas) y las diferencias de rating entre el once del underdog y
+ el del favorito. O empezá desde un partido real de la temporada de test.</p>
+ <div class="ui"><select id="caso"></select><button class="sec" id="cargar">Cargar este partido</button></div>
+ <div class="form">
+  <label>Cuota del local<input id="c_local" type="number" step="0.01" min="1.01" value="1.80"></label>
+  <label>Cuota del empate<input id="c_empate" type="number" step="0.01" min="1.01" value="3.60"></label>
+  <label>Cuota del visitante<input id="c_visit" type="number" step="0.01" min="1.01" value="4.50"></label>
+ </div>
+ <p class="nota">Diferencias de rating FIFA: once del underdog menos once del favorito (negativo = el favorito tiene mejores jugadores).</p>
+ <div class="form" id="gaps"></div>
+ <div class="aviso" id="aviso"></div>
+ <div class="grafico"><div id="g_probar"></div></div>
+ <div class="veredicto" id="veredicto"></div>
+</div></section>
+
+<footer><div class="envoltura">
+ Proyecto integrador · Ciencia de Datos · UTN FRM · 2026. Datos: European Soccer Database (Kaggle). Pipeline en Airflow, modelo en
+ scikit-learn, gráficos en Altair. Esta página la genera <code>app/build_app.py</code> a partir de lo que producen el DAG y el notebook de modelado.
+</div></footer>
+
+<script>
+const GRAFICOS = {{GRAFICOS}};
+const M = {{MODELO}};
+const CASOS = {{CASOS}};
+const vistas = window.vistas = {};   // en window para poder inspeccionarlas desde la consola
+// números y fechas en castellano en todos los gráficos (coma decimal, punto de miles, meses en español)
+const opciones = {actions: false, renderer: "canvas",
+  formatLocale: {decimal: ",", thousands: ".", grouping: [3], currency: ["$", ""], minus: "−"},
+  timeFormatLocale: {dateTime: "%A, %e de %B de %Y, %X", date: "%d/%m/%Y", time: "%H:%M:%S", periods: ["AM", "PM"],
+    days: ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"], shortDays: ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"],
+    months: ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"],
+    shortMonths: ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"]}};
+const coma = (x, d) => x.toFixed(d).replace(".", ",");
+Promise.all(Object.entries(GRAFICOS).map(([id, spec]) =>
+  vegaEmbed("#" + id, JSON.parse(spec), opciones).then(r => { vistas[id] = r.view; })
+)).then(calcular).catch(e => console.error(e));
+
+// --- el modelo, la misma fórmula que el notebook escribió en underdog_modelo.json
+const logit = p => { p = Math.min(Math.max(p, 1e-6), 1 - 1e-6); return Math.log(p / (1 - p)); };
+function predecir(probUnderdog, probEmpate, gaps) {
+  let z = M.intercepto;
+  z += M.probabilidades.prob_no_favorito.coef * logit(probUnderdog);
+  z += M.probabilidades.prob_draw.coef * logit(probEmpate);
+  for (const [c, v] of Object.entries(M.numericas)) {
+    const x = Number.isFinite(gaps[c]) ? gaps[c] : v.mediana;
+    z += v.coef * (x - v.media) / v.desvio;
+  }
+  return 1 / (1 + Math.exp(-z));
+}
+
+const pct = (x, d = 1) => (100 * x).toFixed(d).replace(".", ",") + "%";
+const contenedor = document.getElementById("gaps");
+for (const [c, v] of Object.entries(M.numericas)) {
+  const r = M.rangos[c];
+  contenedor.insertAdjacentHTML("beforeend",
+    `<label>${r.nombre}<input id="${c}" type="number" step="0.1" min="${r.min.toFixed(1)}" max="${r.max.toFixed(1)}" value="${v.media.toFixed(1)}"
+      title="El modelo vio valores entre ${coma(r.min, 1)} y ${coma(r.max, 1)}"></label>`);
+}
+const selector = document.getElementById("caso");
+CASOS.forEach((c, i) => selector.insertAdjacentHTML("beforeend", `<option value="${i}">${c.nombre}</option>`));
+
+function cargarCaso() {
+  const c = CASOS[+selector.value];
+  ["c_local", "c_empate", "c_visit"].forEach((id, i) => document.getElementById(id).value = c.cuotas[i].toFixed(2));
+  for (const k of Object.keys(M.numericas)) document.getElementById(k).value = c.gaps[k] == null ? "" : c.gaps[k];
+  calcular(c.resultado);
+}
+document.getElementById("cargar").onclick = cargarCaso;
+document.querySelectorAll("input").forEach(el => el.addEventListener("input", () => calcular()));
+
+function calcular(resultadoReal) {
+  const cuotas = ["c_local", "c_empate", "c_visit"].map(id => parseFloat(document.getElementById(id).value));
+  const avisos = [];
+  const aviso = document.getElementById("aviso"), veredicto = document.getElementById("veredicto");
+  if (cuotas.some(c => !(c > 1))) { aviso.style.display = "block"; aviso.textContent = "Las tres cuotas tienen que ser mayores que 1."; veredicto.innerHTML = ""; return; }
+  const inv = cuotas.map(c => 1 / c), suma = inv[0] + inv[1] + inv[2];
+  const [pLocal, pEmpate, pVisit] = inv.map(x => x / suma);
+  const localFavorito = pLocal > pVisit;
+  const pUnderdog = Math.min(pLocal, pVisit), cuotaUnderdog = localFavorito ? cuotas[2] : cuotas[0];
+  if (Math.abs(pLocal - pVisit) <= 0.05) avisos.push("Partido parejo: la diferencia entre local y visitante es de 5 puntos o menos. El modelo nunca vio partidos así (el underdog depende de la casa de apuestas).");
+  if (inv[1] > 0.40) avisos.push("La cuota del empate es incoherente (probabilidad implícita mayor a 40%): el pipeline descarta esos partidos.");
+  for (const c of ["prob_no_favorito", "prob_draw"]) {
+    const v = c === "prob_no_favorito" ? pUnderdog : pEmpate, r = M.rangos[c];
+    if (v < r.min || v > r.max) avisos.push(`La probabilidad ${c === "prob_draw" ? "del empate" : "del underdog"} (${pct(v)}) está fuera de lo que vio el modelo (${pct(r.min)} a ${pct(r.max)}).`);
+  }
+  const gaps = {};
+  for (const c of Object.keys(M.numericas)) {
+    const el = document.getElementById(c), v = parseFloat(el.value), r = M.rangos[c];
+    gaps[c] = v;
+    const fuera = Number.isFinite(v) && (v < r.min || v > r.max);
+    el.classList.toggle("fuera", fuera);
+    if (fuera) avisos.push(`${r.nombre}: ${v} está fuera de lo que vio el modelo (${coma(r.min, 1)} a ${coma(r.max, 1)}).`);
+    if (!Number.isFinite(v)) avisos.push(`${r.nombre}: vacío, se usa la mediana del entrenamiento (${coma(M.numericas[c].mediana, 1)}).`);
+  }
+  aviso.style.display = avisos.length ? "block" : "none";
+  aviso.innerHTML = avisos.length ? "<b>Ojo:</b> " + avisos.join("<br>") : "";
+
+  const p = predecir(pUnderdog, pEmpate, gaps), valor = p * cuotaUnderdog - 1;
+  if (vistas.g_probar) {
+    vistas.g_probar.data("caso", [{quien: "Según la cuota", p: pUnderdog}, {quien: "Según el modelo", p}])
+      .data("equilibrio", [{p: 1 / cuotaUnderdog}]).runAsync();
+  }
+  const quien = localFavorito ? "el visitante" : "el local";
+  const decide = valor > 0
+    ? `<b style="color:var(--modelo)">Apostaría.</b> El modelo cree que la cuota paga más de lo que vale el riesgo: valor esperado ${pct(valor)} por peso apostado.`
+    : `<b style="color:var(--todos)">No apostaría.</b> La cuota no compensa el riesgo según el modelo: valor esperado ${pct(valor)} por peso apostado.`;
+  veredicto.innerHTML = `El underdog es <b>${quien}</b> (cuota ${coma(cuotaUnderdog, 2)}). La cuota le da <b>${pct(pUnderdog)}</b>; el modelo, <b>${pct(p)}</b>.<br>${decide}`
+    + (typeof resultadoReal === "string" ? `<br><span class="nota">${resultadoReal}.</span>` : "")
+    + (avisos.length ? `<br><span class="nota">Hay valores fuera de lo que vio el modelo: tomalo con pinzas.</span>` : "");
+}
+</script>
+</body>
+</html>
