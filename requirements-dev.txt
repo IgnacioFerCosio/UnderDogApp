@@ -10,3 +10,6 @@ scipy
 scikit-learn
 ipykernel
 nbconvert
+# app de la Entrega 4 (gráficos)
+altair>=6.0
+joblib

@@ -280,15 +280,24 @@ de cada ficha recoge lo que el grupo esperaba antes de ver los resultados. Check
 
 `notebooks/entrega_3_modelado.ipynb` (ejecutado, con salidas guardadas, `SEMILLA = 42`). Lee el Silver que produce el DAG.
 
-- **Métrica**: ROC-AUC (ordenar partidos por chance de sorpresa), log-loss de secundaria (calibración).
+- **Métricas**: ROC-AUC (¿ordena los partidos?) y log-loss (¿son creíbles las probabilidades?), más el **ROI** de una decisión:
+  apostar $100 al underdog sólo si `p_modelo × cuota − 1 > 0`, con las cuotas reales (que traen el margen de la casa).
 - **Validación**: temporal. `TimeSeriesSplit(5)` sobre 2008/09–2014/15; test = temporada 2015/16, mirado una vez.
-- **Comparación**: piso (`DummyClassifier`), cuota cruda del mercado, logística, árbol, random forest y gradient boosting,
-  cada familia con su grilla y media ± desvío. Ningún modelo complejo le gana a la logística por más que el desvío.
-- **Modelo final**: regresión logística sobre `logit(prob_no_favorito)`. Aprende `logit(p) = −0,04 + 1,00 · logit(mercado)`:
-  la probabilidad del mercado ya está calibrada y los 10 gaps de jugadores no le agregan nada (Δ AUC −0,0002 ± 0,003).
-  Validación AUC 0,637 ± 0,010; test AUC 0,656, log-loss 0,499 (piso 0,529).
-- **Artefacto para la Entrega 4**: `include/data/models/underdog_modelo.joblib` (pipeline completo) + `underdog_modelo.json`
-  (columnas, umbral 0,172, métricas). Para cargarlo hace falta poder importar `include.src.features` (el `logit` del pipeline).
+- **Comparación**: piso (`DummyClassifier`), la cuota tal cual, logística, árbol, random forest y gradient boosting, cada familia
+  con su grilla, su barrido de complejidad y media ± desvío. Ningún modelo le gana a la logística ni al mercado por más que el desvío.
+- **Modelo final**: regresión logística con las 12 columnas (mercado en logit + 10 diferencias de rating del XI), C = 1.
+  Ordena igual que el mercado (validación AUC 0,636 ± 0,009; test 0,660 contra 0,656 de la cuota) y es el único que **cambia
+  decisiones sin perder plata**: apostar a ciegas a todos los underdogs pierde 7,7% (IC [−11,3%; −4,1%]); apostar sólo donde el
+  modelo ve valor queda en +0,8% (IC [−10,7%; +12,7%], incluye el cero) apostando en ~11% de los partidos.
+
+**Correcciones de la defensa de la Entrega 3** (detalle en la primera celda del notebook): el modelo de una sola columna era «la
+cuota con otro nombre» y nunca tomaba una decisión → se mide en plata y se elige el de 12 columnas; barridos de hiperparámetros
+para las cuatro familias; todos los gráficos de AUC en la misma escala y sin barridos «hacia el infinito»; diferencias porcentuales
+en las tablas de comparación.
+
+**Artefactos** (en `include/data/models/`, no se versionan: los regenera el notebook): `underdog_modelo.joblib` (el pipeline),
+`underdog_modelo.json` (la fórmula escrita, verificada contra el pipeline: es la que corre la app) y `resultados_e3.json` (las
+tablas que muestra la app). Para cargar el `.joblib` hace falta poder importar `include.src.features` (el `logit` del pipeline).
 
 Re-ejecutarlo de arriba a abajo (con el DAG ya corrido):
 
@@ -302,6 +311,42 @@ Silver del DAG (PostgreSQL) es idéntico.
 
 **Puertos en esta copia**: la metadata de Airflow usa el 5435 (`.astro/config.yaml`) y `source-db` se publica en
 `localhost:5434`, porque 5432 y 5433 los usa otro proyecto en la misma PC.
+
+## Entrega 4 — La aplicación
+
+Una página estática (`docs/index.html`) con forma de copa de martini: portada con la idea central, tres secciones guiadas (los
+datos, lo que encontramos, el modelo), cada una con su «Cómo lo sabemos», y dos secciones para el usuario: **Explorá** (los 15.364
+partidos predichos fuera de muestra, con filtros de liga y temporada, recuadro con el mouse y el detalle de cada partido) y
+**Probá el modelo** (cargás las cuotas y los ratings de un partido y la página calcula la probabilidad y si conviene apostar).
+Los gráficos son de Altair; el modelo es una fórmula, así que corre en el navegador sin servidor.
+
+**Cómo se regenera desde cero** (si cambian los datos):
+
+1. Correr el DAG (secciones 11 a 14): actualiza Silver y la auditoría.
+2. Re-ejecutar el notebook de modelado: actualiza `include/data/models/`.
+3. Generar la página:
+
+```bash
+.venv/Scripts/pip install -r requirements-dev.txt
+```
+
+```bash
+.venv/Scripts/python app/build_app.py
+```
+
+`app/build_app.py` lee Silver, la auditoría y lo que dejó el notebook, **verifica que la fórmula de la página dé lo mismo que el
+`.joblib`** (falla si no), y escribe `docs/index.html` y `docs/data/partidos.json` a partir de la plantilla `app/plantilla.html`.
+
+**Verla en local** (la exploración carga `data/partidos.json`, así que hace falta un servidor; abrir el archivo con doble clic no alcanza):
+
+```bash
+.venv/Scripts/python -m http.server 8765 --directory docs
+```
+
+y abrir <http://localhost:8765>.
+
+**Publicarla**: GitHub Pages, *Settings → Pages → Deploy from a branch → `main` / `docs`*. Cada push a `main` con un `docs/`
+regenerado actualiza la URL pública.
 
 ## Estructura
 
@@ -320,6 +365,9 @@ include/src/storage.py               escrituras atómicas de Parquet/CSV/JSON
 include/src/source_loader.py         seed SQLite -> PostgreSQL (fuera del DAG)
 docker-compose.override.yml          servicio source-db
 notebooks/entrega_2_eda.ipynb        EDA de la Entrega 2
-docs/                                arquitectura, decisiones, diccionario, candidatas, checklist
+notebooks/entrega_3_modelado.ipynb   modelado de la Entrega 3 (corregido)
+app/build_app.py                     genera la app de la Entrega 4 (docs/index.html)
+app/plantilla.html                   plantilla de la página
+docs/                                la app publicada (index.html, data/) + arquitectura, decisiones, diccionario, guías
 tests/                               tests de lógica, Bronze, checks, Silver real y DAG
 ```
