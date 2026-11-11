@@ -511,6 +511,10 @@ function calcular() {
     gaps[c] = v;
     document.getElementById("o_" + c).textContent = (v > 0 ? "+" : "") + coma(v, 1);
   }
+  // los ratings de nivel (XI, 3 mejores, defensa, medio, ataque) correlacionan entre 0,86 y 0,96: en la realidad se mueven juntos
+  const grupo = ["nofav_xi_overall_mean_gap", "nofav_top3_overall_gap", "nofav_def_overall_gap", "nofav_mid_overall_gap", "nofav_att_overall_gap"].filter(c => M.numericas[c]);
+  const zs = grupo.map(c => (gaps[c] - M.numericas[c].media) / M.numericas[c].desvio);
+  if (zs.length && Math.max(...zs) - Math.min(...zs) > 3.5) avisos.push("Los ratings del once no son coherentes entre sí (por ejemplo, un gran contraste entre el rating medio, la defensa o el ataque). En partidos reales esos valores se mueven juntos, así que esta combinación casi no ocurre (menos de 1 de cada 100 partidos reales).");
   aviso.style.display = avisos.length ? "block" : "none";
   aviso.innerHTML = avisos.length ? "<b>Ojo:</b> " + avisos.join("<br>") : "";
 
