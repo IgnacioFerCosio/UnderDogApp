@@ -146,7 +146,7 @@ footer b{color:#fff}
  <div class="kicker">Proyecto integrador · Ciencia de Datos · UTN FRM · 5K10</div>
  <h1>¿Ganará el no favorito el próximo partido?</h1>
  <p class="tesis">Las cuotas de las casas de apuestas ya saben casi todo lo que dicen los jugadores: un modelo con los ratings de
- los titulares ordena los partidos igual que el mercado, pero es el único que elige a qué underdog apostarle sin perder el margen de la casa.</p>
+ los titulares ordena los partidos igual que el mercado, pero es el único que encuentra underdogs donde apostar sin perder el margen de la casa, aunque ese resultado todavía no se distingue de cero.</p>
  <div class="cifras">
   <div class="cifra"><b>20,3%</b><span>de 17.959 partidos de 9 ligas europeas (2008–2016) los ganó el underdog</span></div>
   <div class="cifra"><b>0,66 ≈ 0,66</b><span>el modelo ordena los partidos que nunca vio igual que la cuota (AUC; 0,5 sería adivinar)</span></div>
@@ -209,7 +209,7 @@ footer b{color:#fff}
 <!-- TALLO 3 · EL MODELO -->
 <section id="modelo"><div class="env">
  <div class="etiqueta"><i>3</i>El modelo</div>
- <h2>El modelo ordena igual que las cuotas, pero es el único que elige apuestas sin perder el margen de la casa: de −7,7% a +0,8%</h2>
+ <h2>El modelo ordena igual que las cuotas, pero es el único que encuentra apuestas sin perder el margen de la casa (sin descartar el cero): de −7,7% a +0,8%</h2>
  <div class="texto"><p class="lead">Si sólo se mira qué tan bien ordena los partidos, ningún modelo le gana a la cuota. La pregunta que sí cambia algo es otra: ¿sirve para
  decidir? La regla es apostar $100 al underdog sólo cuando el modelo cree que la cuota paga más de lo que el riesgo vale. Apostarle a
  ciegas a todos los underdogs pierde el margen de la casa, partido tras partido. El modelo apuesta en uno de cada diez partidos y queda cerca de empatar.</p></div>
@@ -494,7 +494,7 @@ function calcular() {
       ? `<span class="si">Apostaría.</span> La cuota paga más de lo que vale el riesgo.`
       : `<span class="no">No apostaría.</span> La cuota no compensa el riesgo.`}</div>
     <div>La cuota le da al underdog <b>${pct(pUnderdog)}</b>; el modelo, <b>${pct(p)}</b>. Valor esperado: <b>${valor > 0 ? "+" : ""}${pct(valor)}</b> por cada peso apostado.</div>
-    <div class="chico" style="margin-top:8px">${casoActual ? casoActual.resultado + ". " : ""}Valor esperado positivo no es ganar: es cobrar, en el largo plazo, más de lo que el riesgo vale.
+    <div class="chico" style="margin-top:8px">${casoActual ? casoActual.resultado + ". " : ""}Valor esperado positivo no es ganar: es cobrar, en el largo plazo, más de lo que el riesgo vale. En la validación, el retorno de esta regla no se distingue de cero: sirve para pensar, no es una promesa de ganancia.
     ${avisos.length ? " Hay valores fuera de lo que vio el modelo: tomalo con pinzas." : ""}</div>`;
 }
 
