@@ -538,6 +538,7 @@ function calcular() {
   const [pLocal, pEmpate, pVisit] = inv.map(x => x / suma);
   const localFavorito = pLocal > pVisit;
   const pUnderdog = Math.min(pLocal, pVisit), cuotaUnderdog = localFavorito ? cuotas[2] : cuotas[0];
+  if (suma < 0.999) avisos.push(`Con estas cuotas las probabilidades suman ${pct(suma, 0)}, menos de 100%: un mercado así es imposible (las casas siempre se quedan con un margen y la suma da algo más de 100%). Revisá las cuotas.`);
   if (Math.abs(pLocal - pVisit) <= 0.05) avisos.push("Partido parejo: entre local y visitante hay 5 puntos o menos. El modelo nunca vio partidos así (el underdog depende de la casa de apuestas).");
   if (inv[1] > 0.40) avisos.push("La cuota del empate es incoherente (probabilidad implícita mayor a 40%): el pipeline descarta esos partidos.");
   for (const c of ["prob_no_favorito", "prob_draw"]) {
