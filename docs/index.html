@@ -334,7 +334,7 @@ footer b{color:#fff}
   </div>
   <div class="caja">
    <h3>Los once titulares</h3><p class="nota">Rating FIFA: underdog menos favorito. A la izquierda, el favorito tiene mejores jugadores.</p>
-   <label class="juntos"><input type="checkbox" id="juntos" checked> Mover juntos el rating medio y los 3 mejores: al tocar uno, los ratings de nivel se acomodan como en partidos reales. Defensa, medio y ataque se mueven por separado, y el rating medio del XI siempre acompaña a esas tres líneas.</label>
+   <label class="juntos"><input type="checkbox" id="juntos" checked> Mover juntos el rating medio, los 3 mejores y el mejor jugador: al tocar uno, los ratings de nivel se acomodan como en partidos reales. Defensa, medio y ataque se mueven por separado, y el rating medio del XI siempre acompaña a esas tres líneas.</label>
    <div id="gaps"></div>
   </div>
  </div>
@@ -490,8 +490,9 @@ bPartido.addEventListener("change", () => {
 
 // ratings que se mueven juntos: correlaciones medidas en los 2.399 partidos de test; al mover uno, los otros se acomodan al valor esperado (rho × desvíos)
 const RHO = {
-  nofav_xi_overall_mean_gap: {nofav_top3_overall_gap: .92, nofav_def_overall_gap: .88, nofav_mid_overall_gap: .81, nofav_att_overall_gap: .84},
-  nofav_top3_overall_gap: {nofav_xi_overall_mean_gap: .92, nofav_def_overall_gap: .77, nofav_mid_overall_gap: .74, nofav_att_overall_gap: .80},
+  nofav_xi_overall_mean_gap: {nofav_top3_overall_gap: .92, nofav_best_overall_gap: .86, nofav_def_overall_gap: .88, nofav_mid_overall_gap: .81, nofav_att_overall_gap: .84},
+  nofav_top3_overall_gap: {nofav_best_overall_gap: .96, nofav_xi_overall_mean_gap: .92, nofav_def_overall_gap: .77, nofav_mid_overall_gap: .74, nofav_att_overall_gap: .80},
+  nofav_best_overall_gap: {nofav_top3_overall_gap: .96, nofav_xi_overall_mean_gap: .86, nofav_def_overall_gap: .73, nofav_mid_overall_gap: .68, nofav_att_overall_gap: .74},
   nofav_def_overall_gap: {nofav_xi_overall_mean_gap: .88, nofav_top3_overall_gap: .77, nofav_mid_overall_gap: .61, nofav_att_overall_gap: .63},
   nofav_mid_overall_gap: {nofav_xi_overall_mean_gap: .81, nofav_top3_overall_gap: .74, nofav_def_overall_gap: .61, nofav_att_overall_gap: .58},
   nofav_att_overall_gap: {nofav_xi_overall_mean_gap: .84, nofav_top3_overall_gap: .80, nofav_def_overall_gap: .63, nofav_mid_overall_gap: .58}
@@ -512,7 +513,7 @@ contenedor.addEventListener("input", e => {
     // las líneas se mueven por su cuenta; el promedio del XI acompaña según el peso de cada línea
     document.getElementById(XI).value = clamp(XI, previo[XI] + PESO_LINEA[id] * (valor(id) - previo[id]));
   } else if (RHO[id] && document.getElementById("juntos").checked) {
-    // el rating medio y los 3 mejores arrastran a los demás ratings de nivel según su correlación
+    // el rating medio, los 3 mejores y el mejor jugador arrastran a los demás ratings de nivel según su correlación
     const z = (valor(id) - M.numericas[id].media) / M.numericas[id].desvio;
     for (const [otro, r] of Object.entries(RHO[id])) {
       const m = M.numericas[otro];
