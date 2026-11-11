@@ -174,12 +174,11 @@ footer b{color:#fff}
 <header id="arriba"><div class="env">
  <div class="kicker">Proyecto integrador · Ciencia de Datos · UTN FRM · 5K10</div>
  <h1>¿Ganará el no favorito el próximo partido?</h1>
- <p class="tesis">Las cuotas de las casas de apuestas ya saben casi todo lo que dicen los jugadores: un modelo con los ratings de
- los titulares ordena los partidos igual que el mercado, pero es el único que encuentra underdogs donde apostar sin perder el margen de la casa, aunque ese resultado todavía no se distingue de cero.</p>
+ <p class="tesis">Las casas de apuestas ya ponen en la cuota casi todo lo que se sabe de los jugadores, así que nuestro modelo no predice mejor que ellas. Lo que sí hace es elegir en qué partidos conviene apostarle al no favorito: con esa regla pasamos de perder plata a quedar casi en cero, aunque esa mejora todavía podría ser casualidad.</p>
  <div class="cifras">
-  <div class="cifra"><b>{{TASA}}</b><span>de {{N}} partidos de 9 ligas europeas (2008–2016) los ganó el underdog</span></div>
-  <div class="cifra"><b>{{AUC_TEST_2}} ≈ {{AUC_MERCADO_2}}</b><span>el modelo ordena los partidos que nunca vio igual que la cuota (AUC; 0,5 sería adivinar)</span></div>
-  <div class="cifra"><b>{{ROI_TODOS}} <span class="flecha">→</span> {{ROI_MODELO}}</b><span>retorno de apostarle a todos los underdogs, contra apostar sólo donde el modelo ve valor</span></div>
+  <div class="cifra"><b>{{TASA}}</b><span>de los {{N}} partidos de 9 ligas europeas (2008–2016) los ganó el equipo no favorito: es la excepción, no la regla</span></div>
+  <div class="cifra"><b>{{AUC_TEST_2}} = {{AUC_MERCADO_2}}</b><span>puntaje con que el modelo y la cuota ordenan los partidos según las chances del underdog (0,5 = azar, 1 = perfecto): empatan</span></div>
+  <div class="cifra"><b>{{ROI_TODOS}} <span class="flecha">→</span> {{ROI_MODELO}}</b><span>retorno por peso apostado: se pierde apostándole a todos los underdogs; se queda casi en cero apostando sólo donde el modelo ve valor (diferencia todavía no confiable)</span></div>
  </div>
  <a class="bajar" href="#datos">Empezar por los datos ↓</a>
 </div></header>
