@@ -107,10 +107,14 @@ code{font-size:.84em;background:#f0eee8;padding:1px 6px;border-radius:5px}
 .nombres label{font-size:.75rem;font-weight:600;color:var(--suave);text-transform:uppercase;letter-spacing:.05em}
 .nombres input{width:100%;font:inherit;font-size:.95rem;padding:8px 10px;border:1px solid #d3d8dd;border-radius:10px;margin-top:4px}
 .nombres input:focus{border-color:var(--modelo);outline:none}
-.chips{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 18px}
-.chip{font:inherit;font-size:.85rem;border:1px solid #d3d8dd;background:#fff;color:var(--tinta);border-radius:99px;padding:7px 14px;cursor:pointer;transition:.15s;display:flex;align-items:center;gap:8px}
-.chip:hover{border-color:var(--modelo)}.chip.activo{background:var(--modelo);border-color:var(--modelo);color:#fff}
-.chip em{font-style:normal;font-size:.72rem;opacity:.7}
+.chips{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:10px 0 18px}
+@media(max-width:680px){.chips{grid-template-columns:1fr}}
+.chip{font:inherit;text-align:left;border:1.5px solid #d3d8dd;background:#fff;color:var(--tinta);border-radius:14px;padding:12px 14px;cursor:pointer;transition:.15s;display:flex;flex-direction:column;gap:2px}
+.chip:hover{border-color:var(--modelo);transform:translateY(-1px)}
+.chip.activo{border-color:var(--modelo);background:var(--modelo-claro);box-shadow:0 0 0 2px var(--modelo) inset}
+.chip em{font-style:normal;font-size:.7rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--modelo)}
+.chip b{font-size:.95rem;line-height:1.25}
+.chip small{font-size:.78rem;color:var(--suave)}
 .panel{display:grid;grid-template-columns:1fr 1fr;gap:20px}
 @media (max-width:760px){.panel{grid-template-columns:1fr}}
 .caja{background:var(--papel);border:1px solid var(--linea);border-radius:18px;padding:18px 20px;box-shadow:var(--sombra)}
@@ -125,10 +129,27 @@ code{font-size:.84em;background:#f0eee8;padding:1px 6px;border-radius:5px}
 .deslizador input{grid-column:1/-1;width:100%;accent-color:var(--modelo)}
 .deslizador.fuera output{color:var(--todos)}
 .aviso{background:var(--avisobg);color:var(--aviso);border-radius:12px;padding:10px 14px;margin:12px 0;font-size:.9rem;display:none}
-.veredicto{border-radius:18px;padding:20px 22px;margin:18px 0;background:var(--noche);color:#e9eef1}
-.veredicto .grande{font-family:var(--serif);font-size:1.6rem;line-height:1.25;margin:4px 0 8px;color:#fff}
+.veredicto{border-radius:18px;margin:18px 0;background:var(--noche);color:#e9eef1;overflow:hidden;border:2px solid transparent}
+.veredicto.v-si{border-color:#2fb5a3}.veredicto.v-no{border-color:#e0685a}
+.veredicto .cab{padding:16px 22px 4px}
+.veredicto .decision{display:grid;grid-template-columns:1fr auto;gap:12px 24px;align-items:center;padding:8px 22px 18px}
+@media(max-width:680px){.veredicto .decision{grid-template-columns:1fr}}
+.veredicto .etq{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:#8fa1ab;font-weight:600}
+.veredicto .grande{font-family:var(--serif);font-size:2.3rem;line-height:1.1;margin:2px 0 6px;color:#fff}
 .veredicto .si{color:#7fe0d0}.veredicto .no{color:#ff9c8f}
-.veredicto .chico{color:#a9b7bf;font-size:.9rem}
+.veredicto .porque{color:#c6d2d8;font-size:.95rem;line-height:1.45}
+.veredicto .plata{background:rgba(255,255,255,.06);border-radius:14px;padding:12px 18px;text-align:center;min-width:190px}
+.veredicto .plata .num{font-family:var(--serif);font-size:2.2rem;line-height:1.1;font-weight:700}
+.veredicto .plata .sub{font-size:.78rem;color:#a9b7bf;line-height:1.3}
+.veredicto .barras{background:rgba(255,255,255,.04);padding:14px 22px;display:grid;gap:9px}
+.veredicto .barra{display:grid;grid-template-columns:130px 1fr 52px;gap:10px;align-items:center;font-size:.85rem}
+@media(max-width:680px){.veredicto .barra{grid-template-columns:100px 1fr 46px;font-size:.8rem}}
+.veredicto .pista{height:14px;background:rgba(255,255,255,.1);border-radius:99px;overflow:hidden}
+.veredicto .pista i{display:block;height:100%;border-radius:99px}
+.veredicto .barra b{text-align:right;font-size:1rem;color:#fff}
+.veredicto .pie{padding:12px 22px 16px;font-size:.85rem;color:#a9b7bf;line-height:1.5}
+.veredicto .real{display:inline-block;background:rgba(255,255,255,.1);color:#fff;border-radius:99px;padding:3px 12px;font-size:.82rem;margin-bottom:6px;font-weight:600}
+.veredicto .pie .ojo{color:#ffcf8a;display:block;margin-top:6px}
 footer{background:var(--noche);color:#9aa8b0;padding:40px 0 60px;font-size:.88rem;margin-top:60px}
 footer b{color:#fff}
 @media (max-width:600px){body{font-size:15.5px}header{padding:56px 0 46px}section{padding:56px 0 26px}.grafico{padding:14px 10px 8px}}
@@ -185,7 +206,7 @@ footer b{color:#fff}
 <!-- TALLO 2 · LO QUE ENCONTRAMOS -->
 <section id="hallazgo"><div class="env">
  <div class="etiqueta"><i>2</i>Lo que encontramos</div>
- <h2>Un once mejor que el del favorito más que duplica las victorias del underdog ({{XI_BAJO}} → {{XI_ALTO}}), pero la cuota ya lo sabía</h2>
+ <h2>Cuando los titulares del underdog son mejores que los del favorito, gana {{XI_ALTO}} de las veces; cuando son mucho peores, {{XI_BAJO}}. Pero la cuota ya lo sabía</h2>
  <div class="texto"><p class="lead">Comparamos el rating FIFA medio de los once titulares del underdog contra el del favorito. Cuanto mejor es el once del underdog,
  más gana. Pero la línea naranja (lo que la cuota esperaba en esos mismos partidos) va pegada a la azul: las casas de apuestas ya
  ponían en el precio la calidad de los titulares.</p></div>
@@ -281,7 +302,7 @@ footer b{color:#fff}
   <label>Equipo<select class="lindo" id="b_equipo" disabled><option value="">Primero elegí la liga</option></select></label>
   <label>Partido<select class="lindo" id="b_partido" disabled><option value="">Primero elegí el equipo</option></select></label>
  </div>
- <p class="nota-chips">O probá un ejemplo:</p>
+ <p class="nota-chips">Empezá con un partido real de la temporada de test (o armá el tuyo abajo):</p>
  <div class="chips" id="chips"></div>
  <div class="panel">
   <div class="caja">
@@ -406,8 +427,12 @@ for (const [c, v] of Object.entries(M.numericas)) {
     <input id="${c}" type="range" step="any" min="${r.min}" max="${r.max}" value="${v.media}"></div>`);
 }
 const chips = document.getElementById("chips");
-CASOS.forEach((c, i) => chips.insertAdjacentHTML("beforeend",
-  `<button class="chip" data-i="${i}">${c.etiqueta ? `<em>${c.etiqueta}</em>` : ""}${c.local} – ${c.visitante}</button>`));
+// sólo tres ejemplos, uno por cada historia que se quiere contar
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+const EJEMPLOS = [0, 2, 3].filter(i => CASOS[i]);
+EJEMPLOS.forEach(i => { const c = CASOS[i];
+  chips.insertAdjacentHTML("beforeend",
+  `<button class="chip" data-i="${i}"><em>${cap(c.etiqueta || "Ejemplo")}</em><b>${c.local} – ${c.visitante}</b><small>${c.liga} · ${c.fecha}</small></button>`); });
 chips.addEventListener("click", e => { const b = e.target.closest(".chip"); if (b) cargarCaso(+b.dataset.i); });
 let casoActual = null;
 function cargarCaso(i) {
@@ -485,17 +510,32 @@ function calcular() {
   const nombreLocal = document.getElementById("n_local").value.trim() || "Local";
   const nombreVisit = document.getElementById("n_visit").value.trim() || "Visitante";
   const fav = localFavorito ? nombreLocal : nombreVisit, und = localFavorito ? nombreVisit : nombreLocal;
+  const si = valor > 0, por100 = valor * 100, m = Math.max(pUnderdog, p, 0.01) * 1.25;
+  const ancho = x => Math.min(100, 100 * x / m).toFixed(1) + "%";
+  const gris = "#8fa1ab", color = si ? "#2fb5a3" : "#e0685a";
+  veredicto.className = "veredicto " + (si ? "v-si" : "v-no");
   veredicto.innerHTML = `
-    <div class="duelo" style="margin-top:0">
-      <div class="equipo">${escudo(fav, 34)}<div><small style="color:#8fa1ab">Favorito</small>${fav}</div></div>
+    <div class="cab"><div class="duelo" style="margin:0">
+      <div class="equipo">${escudo(fav, 30)}<div><small style="color:#8fa1ab">Favorito</small>${fav}</div></div>
       <span class="vs" style="color:#8fa1ab">contra</span>
-      <div class="equipo">${escudo(und, 34)}<div><small style="color:#8fa1ab">Underdog · cuota ${coma(cuotaUnderdog, 2)}</small>${und}</div></div></div>
-    <div class="grande">${valor > 0
-      ? `<span class="si">Apostaría.</span> La cuota paga más de lo que vale el riesgo.`
-      : `<span class="no">No apostaría.</span> La cuota no compensa el riesgo.`}</div>
-    <div>La cuota le da al underdog <b>${pct(pUnderdog)}</b>; el modelo, <b>${pct(p)}</b>. Valor esperado: <b>${valor > 0 ? "+" : ""}${pct(valor)}</b> por cada peso apostado.</div>
-    <div class="chico" style="margin-top:8px">${casoActual ? casoActual.resultado + ". " : ""}Valor esperado positivo no es ganar: es cobrar, en el largo plazo, más de lo que el riesgo vale. En la validación, el retorno de esta regla no se distingue de cero: sirve para pensar, no es una promesa de ganancia.
-    ${avisos.length ? " Hay valores fuera de lo que vio el modelo: tomalo con pinzas." : ""}</div>`;
+      <div class="equipo">${escudo(und, 30)}<div><small style="color:#8fa1ab">Underdog · paga ${coma(cuotaUnderdog, 2)} por peso</small>${und}</div></div></div></div>
+    <div class="decision">
+      <div><div class="etq">Qué haría el modelo</div>
+        <div class="grande">${si ? `<span class="si">Apostaría al underdog</span>` : `<span class="no">No apostaría</span>`}</div>
+        <div class="porque">${si
+          ? `El modelo cree que ${und} tiene más chances de las que paga la cuota: el precio es bueno.`
+          : `El modelo no ve en ${und} más chances de las que ya paga la cuota: el precio no compensa el riesgo.`}</div></div>
+      <div class="plata"><div class="etq">Por cada $100 apostados</div>
+        <div class="num" style="color:${si ? "#7fe0d0" : "#ff9c8f"}">${por100 >= 0 ? "+" : "−"}$${coma(Math.abs(por100), 0)}</div>
+        <div class="sub">ganancia promedio esperada si se repitiera muchas veces</div></div></div>
+    <div class="barras">
+      <div class="barra"><span>Chances según la cuota</span><div class="pista"><i style="width:${ancho(pUnderdog)};background:#e08a1e"></i></div><b>${pct(pUnderdog)}</b></div>
+      <div class="barra"><span>Chances según el modelo</span><div class="pista"><i style="width:${ancho(p)};background:${color}"></i></div><b>${pct(p)}</b></div>
+    </div>
+    <div class="pie">${casoActual ? (() => { const g = casoActual.resultado.match(/(\d+)\D+(\d+)/), gl = g ? +g[1] : 0, gv = g ? +g[2] : 0, gano = localFavorito ? gv > gl : gl > gv;
+        return `<span class="real">${casoActual.resultado}: ${gano ? "ganó el underdog" : gl === gv ? "empate, no ganó el underdog" : "no ganó el underdog"}</span><br>`; })() : ""}
+      Un valor positivo no es ganar este partido: es cobrar, a la larga, más de lo que el riesgo vale. En la validación el retorno de esta regla no se distingue de cero: sirve para pensar, no es una promesa de ganancia.
+      ${avisos.length ? `<span class="ojo">⚠ Hay valores fuera de lo que vio el modelo: tomalo con pinzas.</span>` : ""}</div>`;
 }
 
 // --- navegación: barra de progreso y sección activa
