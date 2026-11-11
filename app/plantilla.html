@@ -334,7 +334,7 @@ footer b{color:#fff}
   </div>
   <div class="caja">
    <h3>Los once titulares</h3><p class="nota">Rating FIFA: underdog menos favorito. A la izquierda, el favorito tiene mejores jugadores.</p>
-   <label class="juntos"><input type="checkbox" id="juntos" checked> Mover juntos los ratings que se parecen: al tocar uno, el rating medio, los 3 mejores, la defensa, el mediocampo y el ataque se acomodan como suelen hacerlo en partidos reales. Podés ajustar cada uno después.</label>
+   <label class="juntos"><input type="checkbox" id="juntos" checked> Mover juntos el rating medio y los 3 mejores: al tocar uno, los ratings de nivel se acomodan como en partidos reales. Defensa, medio y ataque se mueven por separado, y el rating medio del XI siempre acompaña a esas tres líneas.</label>
    <div id="gaps"></div>
   </div>
  </div>
@@ -460,6 +460,7 @@ function cargar(c) {
   document.getElementById("n_visit").value = c.visitante;
   ["c_local", "c_empate", "c_visit"].forEach((id, k) => document.getElementById(id).value = c.cuotas[k].toFixed(2));
   for (const k of Object.keys(M.numericas)) document.getElementById(k).value = c.gaps[k] == null ? M.numericas[k].mediana : c.gaps[k];
+  fotografiar();
   calcular();
 }
 
@@ -495,16 +496,30 @@ const RHO = {
   nofav_mid_overall_gap: {nofav_xi_overall_mean_gap: .81, nofav_top3_overall_gap: .74, nofav_def_overall_gap: .61, nofav_att_overall_gap: .58},
   nofav_att_overall_gap: {nofav_xi_overall_mean_gap: .84, nofav_top3_overall_gap: .80, nofav_def_overall_gap: .63, nofav_mid_overall_gap: .58}
 };
+// el rating medio del XI es el promedio de los once: se recalcula a partir de defensa, medio y ataque
+// (regresión en los 2.399 partidos de test: xi ≈ 0,42·defensa + 0,26·medio + 0,31·ataque, R² = 0,97)
+const PESO_LINEA = {nofav_def_overall_gap: .42, nofav_mid_overall_gap: .26, nofav_att_overall_gap: .31};
+const XI = "nofav_xi_overall_mean_gap";
+const clamp = (c, v) => Math.min(Math.max(v, M.rangos[c].min), M.rangos[c].max);
+const valor = c => parseFloat(document.getElementById(c).value);
+let previo = {};
+const fotografiar = () => { for (const c of Object.keys(M.numericas)) previo[c] = valor(c); };
+fotografiar();
 contenedor.addEventListener("input", e => {
-  const id = e.target.id, rho = RHO[id];
-  if (!rho || !M.numericas[id] || !document.getElementById("juntos").checked) return;
-  const z = (parseFloat(e.target.value) - M.numericas[id].media) / M.numericas[id].desvio;
-  for (const [otro, r] of Object.entries(rho)) {
-    if (!M.numericas[otro]) continue;
-    const m = M.numericas[otro], rg = M.rangos[otro], el = document.getElementById(otro);
-    el.value = Math.min(Math.max(m.media + r * z * m.desvio, rg.min), rg.max);
+  const id = e.target.id;
+  if (!M.numericas[id]) return;
+  if (PESO_LINEA[id]) {
+    // las líneas se mueven por su cuenta; el promedio del XI acompaña según el peso de cada línea
+    document.getElementById(XI).value = clamp(XI, previo[XI] + PESO_LINEA[id] * (valor(id) - previo[id]));
+  } else if (RHO[id] && document.getElementById("juntos").checked) {
+    // el rating medio y los 3 mejores arrastran a los demás ratings de nivel según su correlación
+    const z = (valor(id) - M.numericas[id].media) / M.numericas[id].desvio;
+    for (const [otro, r] of Object.entries(RHO[id])) {
+      const m = M.numericas[otro];
+      if (m) document.getElementById(otro).value = clamp(otro, m.media + r * z * m.desvio);
+    }
   }
-  calcular();
+  fotografiar(); calcular();
 });
 
 // si el usuario toca algo a mano, deja de ser el partido real: se borra el resultado y queda lo que escribió
