@@ -152,6 +152,14 @@ code{font-size:.84em;background:#f0eee8;padding:1px 6px;border-radius:5px}
 .veredicto .pie .ojo{color:#ffcf8a;display:block;margin-top:6px}
 footer{background:var(--noche);color:#9aa8b0;padding:40px 0 60px;font-size:.88rem;margin-top:60px}
 footer b{color:#fff}
+/* aparición al scrollear (sólo si hay JS y la persona no pidió menos movimiento) */
+@media (prefers-reduced-motion:no-preference){
+ html.anim .rev{opacity:0;transform:translateY(22px);transition:opacity .7s ease,transform .7s cubic-bezier(.2,.7,.2,1);transition-delay:var(--d,0s)}
+ html.anim .rev.in{opacity:1;transform:none}
+ html.anim .grafico.rev{transform:none;opacity:1}
+ html.anim .grafico.rev > div{clip-path:inset(0 100% 0 0);transition:clip-path 1.3s cubic-bezier(.4,.1,.2,1) .15s}
+ html.anim .grafico.rev.in > div{clip-path:inset(0 -2% 0 0)}
+}
 @media (max-width:600px){body{font-size:15.5px}header{padding:56px 0 46px}section{padding:56px 0 26px}.grafico{padding:14px 10px 8px}}
 </style>
 </head>
@@ -536,6 +544,14 @@ function calcular() {
         return `<span class="real">${casoActual.resultado}: ${gano ? "ganó el underdog" : gl === gv ? "empate, no ganó el underdog" : "no ganó el underdog"}</span><br>`; })() : ""}
       Un valor positivo no es ganar este partido: es cobrar, a la larga, más de lo que el riesgo vale. En la validación el retorno de esta regla no se distingue de cero: sirve para pensar, no es una promesa de ganancia.
       ${avisos.length ? `<span class="ojo">⚠ Hay valores fuera de lo que vio el modelo: tomalo con pinzas.</span>` : ""}</div>`;
+}
+
+// --- aparición al scrollear: texto que sube, gráficos que se "dibujan" de izquierda a derecha
+if (!matchMedia("(prefers-reduced-motion: reduce)").matches && "IntersectionObserver" in window) {
+  document.documentElement.classList.add("anim");
+  const objetivos = document.querySelectorAll("section .etiqueta, section h2, section .texto, section .grafico, section .como-leer, section details, section .panel, section .veredicto, section .chips, .tesis, .kpis > *");
+  const rev = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add("in"); rev.unobserve(e.target); } }), {threshold: .12, rootMargin: "0px 0px -6% 0px"});
+  objetivos.forEach((el, i) => { el.classList.add("rev"); rev.observe(el); });
 }
 
 // --- navegación: barra de progreso y sección activa
