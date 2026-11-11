@@ -36,8 +36,8 @@ APUESTA = 100
 VEGA, VEGA_LITE, VEGA_EMBED = "6.2.0", "6.4.1", "7.0.2"
 
 # Los mismos colores que el notebook, con el mismo significado en toda la aplicación
-COLOR = {"modelo": "#0f8b7d", "mercado": "#e08a1e", "todos": "#c0392b", "gano": "#2563a8", "no_gano": "#8b929c",
-         "gano_suave": "#a9c1e0", "fondo_puntos": "#c9ced6", "tinta": "#1e2430", "tinta_suave": "#6b7380"}
+COLOR = {"modelo": "#0f8b7d", "mercado": "#e08a1e", "todos": "#c0392b", "gano": "#2563a8", "no_gano": "#2f3542",
+         "gano_suave": "#a9c1e0", "fondo_puntos": "#d5dae1", "tinta": "#1e2430", "tinta_suave": "#6b7380"}
 RESULTADO = alt.Scale(domain=["Ganó el underdog", "No ganó"], range=[COLOR["gano"], COLOR["no_gano"]])
 ESTRATEGIA = alt.Scale(domain=["Modelo (apuesta si vale la pena)", "Apostar a todos los underdogs", "Mercado como modelo (no apuesta)"],
                        range=[COLOR["modelo"], COLOR["todos"], COLOR["mercado"]])
@@ -237,12 +237,12 @@ def grafico_explorar(ligas: list[str], temporadas: list[str]) -> alt.Chart:
         size=10, opacity=0.35, color=COLOR["fondo_puntos"], clip=True).encode(x=x, y=y, tooltip=detalle)
     apuestas = alt.Chart(datos).transform_filter(filtro).transform_filter("datum.apuesta == 1").mark_circle(
         size=38, opacity=0.85, stroke="white", strokeWidth=0.6, clip=True).encode(
-        x=x, y=y, tooltip=detalle,
+        x=x, y=y, tooltip=detalle, order=alt.Order("resultado:N", sort="descending"),  # los que ganaron se dibujan encima
         color=alt.Color("resultado:N", scale=RESULTADO, title="Apuestas del modelo",
                         legend=alt.Legend(orient="top-left", direction="horizontal", titleFontSize=12, labelFontSize=12)))
     cero = alt.Chart(pd.DataFrame({"y": [0]})).mark_rule(color=COLOR["modelo"], strokeWidth=1.5, strokeDash=[6, 4]).encode(y="y:Q")
     rotulo = alt.Chart(pd.DataFrame({"y": [0], "t": ["arriba de esta línea, el modelo apuesta"]})).mark_text(
-        align="left", x=6, dy=-9, color=COLOR["modelo"], fontWeight="bold", fontSize=12).encode(y="y:Q", text="t:N")
+        align="left", x=6, dy=14, color=COLOR["modelo"], fontWeight="bold", fontSize=12).encode(y="y:Q", text="t:N")
     nube = (fondo + apuestas + cero + rotulo).add_params(liga, temporada, zona).properties(width=760, height=400)
 
     plata = alt.Chart(datos).transform_filter(filtro).transform_filter(zona).transform_calculate(
