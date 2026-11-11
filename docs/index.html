@@ -73,10 +73,11 @@ code{font-size:.84em;background:#f0eee8;padding:1px 6px;border-radius:5px}
 /* la copa */
 .copa{background:linear-gradient(180deg,#eef5f3,#f7f6f2 60%)}
 .copa .etiqueta i{background:var(--modelo)}
-.grafico .vega-embed{display:flex;flex-direction:column;align-items:stretch}
-.grafico .vega-embed>.vega-bindings{order:-1;display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;margin:0 0 16px;padding:12px 14px;background:var(--modelo-claro);border-radius:12px;border:1px solid #cfe6e1}
-.grafico .vega-embed>.vega-bindings::before{content:"Filtrar por";align-self:center;font-size:.74rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--modelo);margin-right:2px}
-.grafico .vega-embed>svg,.grafico .vega-embed>canvas{align-self:center;max-width:100%}
+#g_explorar .vega-embed{display:flex;flex-direction:column;align-items:stretch}
+.vega-bindings:empty{display:none}
+#g_explorar .vega-embed>.vega-bindings{order:-1;display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;margin:0 0 16px;padding:12px 14px;background:var(--modelo-claro);border-radius:12px;border:1px solid #cfe6e1}
+#g_explorar .vega-embed>.vega-bindings::before{content:"Filtrar por";align-self:center;font-size:.74rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--modelo);margin-right:2px}
+#g_explorar .vega-embed>svg,#g_explorar .vega-embed>canvas{align-self:center;max-width:100%}
 .vega-bindings{display:flex;gap:14px;flex-wrap:wrap;margin:4px 0 14px}
 .vega-bind{display:flex;flex-direction:column;gap:4px;font-size:.78rem;font-weight:600;color:var(--suave);text-transform:uppercase;letter-spacing:.06em}
 .vega-bind-name{font-size:.74rem}
